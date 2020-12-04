@@ -2,7 +2,9 @@
 Package viperadapter is for application configuration.
 
 All configuration is started explicitely with a call to
-schuko.Initialize(viperadapter.New()).
+
+	schuko.Initialize(viperadapter.New()).
+
 There is no init() call to set up configuration a priori. The reason
 is to avoid coupling to a specific configuration framework, but rather
 relay this decision to the client.
