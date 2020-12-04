@@ -9,3 +9,5 @@ development and production use.
 
 "Schuko" is the German name for a system of secure power plugs in Europe, short
 for "Schutzkontakt".
+
+![Schuko-Plug](http://npillmayer.github.io/img/Schuko-Stecker.svg)
