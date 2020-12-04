@@ -47,8 +47,8 @@ package logrusadapter
 import (
 	"io"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/npillmayer/schuko/tracing"
+	"github.com/sirupsen/logrus"
 )
 
 // Tracer is our adapter implementation which implements interface

@@ -39,8 +39,8 @@ import (
 	"testing"
 
 	"github.com/npillmayer/schuko"
-	"github.com/npillmayer/schuko/configtestadapter"
 	"github.com/npillmayer/schuko/gconf"
+	"github.com/npillmayer/schuko/testadapter"
 	"github.com/npillmayer/schuko/tracing/gotestingadapter"
 )
 
@@ -55,8 +55,8 @@ import (
 //      }
 //
 func QuickConfig(t *testing.T) func() {
-	config.AddTraceAdapter("test", gotestingadapter.GetAdapter())
-	c := configtestadapter.New()
+	schuko.AddTraceAdapter("test", gotestingadapter.GetAdapter())
+	c := testadapter.New()
 	c.Set("tracing", "test")
 	gconf.Initialize(c)
 	return gotestingadapter.RedirectTracing(t)

@@ -1,9 +1,9 @@
 /*
-Package configtestadapter is for application configuration during tests.
+Package testadapter is for application configuration during tests.
 
 Clients will start configuration explicitely with a call to
 
-	gconf.Initialize(configtestadapter.New())
+	gconf.Initialize(testadapter.New())
 
 There is no init() call to set up configuration a priori. The reason
 is to avoid coupling to a specific configuration framework, but rather
@@ -129,4 +129,4 @@ func (c *Conf) GetBool(key string) bool {
 // IsInteractive is part of the interface Configuration
 func (c *Conf) IsInteractive() bool { return false }
 
-var _ config.Configuration = &Conf{}
+var _ schuko.Configuration = &Conf{}

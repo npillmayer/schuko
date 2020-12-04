@@ -54,9 +54,9 @@ func QuickConfig() {
 	conf := viperadapter.New()
 	if !conf.IsSet("tracing") {
 		conf.Set("tracing", "logrus")
-		adapter := config.GetAdapterFromConfiguration(conf)
+		adapter := schuko.GetAdapterFromConfiguration(conf)
 		if adapter == nil {
-			config.AddTraceAdapter("logrus", logrusadapter.GetAdapter())
+			schuko.AddTraceAdapter("logrus", logrusadapter.GetAdapter())
 		}
 	}
 	gconf.Initialize(conf)
@@ -69,12 +69,12 @@ func WithTracing(tracekey string, traceadapter tracing.Adapter) (err error) {
 	conf := viperadapter.New()
 	conf.Set("tracing", tracekey)
 	if traceadapter == nil {
-		adapter := config.GetAdapterFromConfiguration(conf)
+		adapter := schuko.GetAdapterFromConfiguration(conf)
 		if adapter == nil {
 			err = fmt.Errorf("unable to find tracer for key='%s'", tracekey)
 		}
 	} else {
-		config.AddTraceAdapter(tracekey, traceadapter)
+		schuko.AddTraceAdapter(tracekey, traceadapter)
 	}
 	gconf.Initialize(conf)
 	return

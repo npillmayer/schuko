@@ -59,7 +59,7 @@ import (
 )
 
 // The global configuration is initially set up to be a no-op.
-var globalConf config.Configuration = noconfig{}
+var globalConf schuko.Configuration = noconfig{}
 
 type noconfig struct{}
 
@@ -77,10 +77,10 @@ func (nc noconfig) IsInteractive() bool         { return false }
 // It will call InitDefaults() on the Configuration passed as an argument, and
 // make the Configuration available globally.
 // Functions in this package will serve as a facade to the Configuration.
-func Initialize(conf config.Configuration) {
+func Initialize(conf schuko.Configuration) {
 	globalConf = conf
 	globalConf.InitDefaults()
-	InitTracing(config.GetAdapterFromConfiguration(conf))
+	InitTracing(schuko.GetAdapterFromConfiguration(conf))
 }
 
 // InitTracing sets up all the global module tracers, reading trace levels
