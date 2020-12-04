@@ -63,6 +63,7 @@ func New(name string) *VConf {
 	return &VConf{name: name}
 }
 
+// Init is usually called by schuko.Initialize()
 func (c *VConf) Init() {
 	c.InitDefaults()
 	c.InitConfigPath()
@@ -70,13 +71,6 @@ func (c *VConf) Init() {
 
 // InitDefaults is usually called by Init().
 func (c *VConf) InitDefaults() {
-	/*
-		viper.SetDefault("ContentDir", "content")
-		viper.SetDefault("LayoutDir", "layouts")
-		viper.SetDefault("Taxonomies", map[string]string{"tag": "tags", "category": "categories"})
-		viper.Set("Verbose", true)
-	*/
-
 	viper.SetDefault("tracing", "go")
 	viper.SetDefault("tracingonline", true)
 	viper.SetDefault("tracingequations", "Error")
