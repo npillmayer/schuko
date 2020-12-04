@@ -51,10 +51,14 @@ import (
 	"github.com/spf13/viper"
 )
 
-type VConf struct{}
+// VConf respresents a Viper configuration.
+type VConf struct {
+	name string
+}
 
-func New() *VConf {
-	return &VConf{}
+// New creates a new Viper configuration adapter.
+func New(name string) *VConf {
+	return &VConf{name: name}
 }
 
 func (c *VConf) Init() {
@@ -86,12 +90,12 @@ func (c *VConf) InitDefaults() {
 
 // InitConfigPath is usually called by Init().
 func (c *VConf) InitConfigPath() {
-	viper.SetConfigName("gotype")        // name of config file (without extension)
-	viper.AddConfigPath(".")             // optionally look for config in the working directory
-	viper.AddConfigPath("$GOPATH/etc/")  // path to look for the config file in
-	viper.AddConfigPath("$HOME/.gotype") // call multiple times to add many search paths
-	err := viper.ReadInConfig()          // Find and read the config file
-	if err != nil {                      // Handle errors reading the config file
+	viper.SetConfigName(c.name)             // name of config file (without extension)
+	viper.AddConfigPath(".")                // optionally look for config in the working directory
+	viper.AddConfigPath("$GOPATH/etc/")     // path to look for the config file in
+	viper.AddConfigPath("$HOME/." + c.name) // call multiple times to add many search paths
+	err := viper.ReadInConfig()             // Find and read the config file
+	if err != nil {                         // Handle errors reading the config file
 		panic(fmt.Errorf("Fatal error config file: %s", err))
 	}
 }

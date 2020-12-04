@@ -1,7 +1,7 @@
 /*
 Package gtrace lets clients set up a set of global tracers.
-It infects clients with the semantics of tracing for the gotype-application.
-However, the imposed overhead is very slim, i.e. boils down to having
+It infects clients with the semantics of tracing for the TySE-application.
+However, the imposed overhead is very slim, i.e. it boils down to having
 some global variables declared (but not necessarily used):
 
 	CommandTracer     : Tracing interactive or batch commands from users
