@@ -61,7 +61,7 @@ import (
 	"io"
 	"testing"
 
-	"github.com/npillmayer/gotype/core/config/tracing"
+	"github.com/npillmayer/schuko/tracing"
 )
 
 // Tracer is our adapter implementation which implements interface

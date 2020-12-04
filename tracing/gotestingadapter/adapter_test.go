@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/npillmayer/schuko"
+	"github.com/npillmayer/schuko/gconf"
 	"github.com/npillmayer/schuko/testadapter"
 	"github.com/npillmayer/schuko/tracing"
 	"github.com/npillmayer/schuko/tracing/gotestingadapter"
@@ -21,10 +22,10 @@ func Test1(t *testing.T) {
 }
 
 func Test2(t *testing.T) {
-	config.AddTraceAdapter("test", gotestingadapter.GetAdapter())
+	schuko.AddTraceAdapter("test", gotestingadapter.GetAdapter())
 	c := testadapter.New()
 	c.Set("tracing", "test")
-	config.Initialize(c)
+	gconf.Initialize(c)
 	teardown := gotestingadapter.RedirectTracing(t)
 	defer teardown()
 	tracing.EngineTracer.P("key", "value").Errorf("This is a test")
