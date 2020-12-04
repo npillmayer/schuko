@@ -106,18 +106,22 @@ func (c *VConf) IsSet(key string) bool {
 	return viper.IsSet(key)
 }
 
+// GetString returns a configuration property as a string.
 func (c *VConf) GetString(key string) string {
 	return viper.GetString(key)
 }
 
+// GetInt returns a configuration property as an integer.
 func (c *VConf) GetInt(key string) int {
 	return viper.GetInt(key)
 }
 
+// GetBool returns a configuration property as a boolean value.
 func (c *VConf) GetBool(key string) bool {
 	return viper.GetBool(key)
 }
 
+// IsInteractive is a predicate: are we running in interactive mode?
 func (c *VConf) IsInteractive() bool {
 	return viper.GetBool("tracingonline")
 }
