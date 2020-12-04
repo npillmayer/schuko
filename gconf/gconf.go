@@ -99,7 +99,7 @@ func ConfigureTracing(inputfilename string) {
 	SetDefaultTracingLevels() // set default trace levels from configuration
 	if GetBool("tracingonline") {
 		if inputfilename != "" {
-			file, err := os.Create("__gotype.log")
+			file, err := os.Create("__typrescript.log")
 			if err != nil {
 				gtrace.CommandTracer.Errorf("cannot open tracefile, tracing to stderr")
 			} else {
