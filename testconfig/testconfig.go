@@ -54,10 +54,15 @@ import (
 //          ...
 //      }
 //
-func QuickConfig(t *testing.T) func() {
+func QuickConfig(t *testing.T, maps ...map[string]string) func() {
 	schuko.AddTraceAdapter("test", gotestingadapter.GetAdapter())
 	c := testadapter.New()
 	c.Set("tracing", "test")
+	for _, m := range maps {
+		for k, v := range m {
+			c.Set(k, v)
+		}
+	}
 	gconf.Initialize(c)
 	return gotestingadapter.RedirectTracing(t)
 }
