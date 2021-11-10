@@ -1,4 +1,6 @@
 /*
+Work in progress.
+
 Package koanfadapter is for application configuration.
 
 All configuration is started explicitely with a call to
@@ -21,10 +23,12 @@ package koanfadapter
 
 import (
 	"fmt"
+	"log"
 	"path/filepath"
 
 	"github.com/knadh/koanf"
 	"github.com/knadh/koanf/providers/confmap"
+	"github.com/knadh/koanf/providers/file"
 	"github.com/npillmayer/schuko"
 )
 
@@ -62,7 +66,7 @@ func (c *KConf) Init() {
 func (c *KConf) InitDefaults() {
 	c.k.Load(confmap.Provider(map[string]interface{}{
 		"tracing": "go",
-	}, "."), nil)
+	}, c.k.Delim()), nil)
 }
 
 // InitFromDefaultFile searches at OS-dependent
@@ -89,6 +93,9 @@ func (c *KConf) InitFromDefaultFile() {
 			panic(fmt.Sprintf("do not know how to decode %q-files (%q)", ext, path))
 		case ".nt":
 			//TODO
+			if err := c.k.Load(file.Provider(path), NestedTextParser{}); err != nil {
+				log.Fatalf("error loading NT config: %v", err)
+			}
 		default:
 			panic(fmt.Sprintf("do not know how to decode %q-files (%q)", ext, path))
 		}
@@ -99,7 +106,7 @@ func (c *KConf) InitFromDefaultFile() {
 func (c *KConf) Set(key string, value interface{}) {
 	c.k.Load(confmap.Provider(map[string]interface{}{
 		key: value,
-	}, "."), nil)
+	}, c.k.Delim()), nil)
 }
 
 // IsSet is a predicate wether a configuration flag is set to true.
