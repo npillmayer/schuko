@@ -41,9 +41,9 @@ import (
 
 	"github.com/npillmayer/schuko"
 	"github.com/npillmayer/schuko/gconf"
+	"github.com/npillmayer/schuko/schukonf/viperadapter"
 	"github.com/npillmayer/schuko/tracing"
 	"github.com/npillmayer/schuko/tracing/logrusadapter"
-	"github.com/npillmayer/schuko/viperadapter"
 )
 
 // QuickConfig sets up a configuration suitable for applications.
@@ -51,7 +51,7 @@ import (
 // If tracing is not selected from viper (which may have its own default for tracing),
 // it defaults to "github.com/Sirupsen/logrus".
 func QuickConfig() {
-	conf := viperadapter.New()
+	conf := viperadapter.New("qconf")
 	if !conf.IsSet("tracing") {
 		conf.Set("tracing", "logrus")
 		adapter := schuko.GetAdapterFromConfiguration(conf)
@@ -66,7 +66,7 @@ func QuickConfig() {
 // default tracing. It will override any tracing selected from the application
 // configuration.
 func WithTracing(tracekey string, traceadapter tracing.Adapter) (err error) {
-	conf := viperadapter.New()
+	conf := viperadapter.New("myconf")
 	conf.Set("tracing", tracekey)
 	if traceadapter == nil {
 		adapter := schuko.GetAdapterFromConfiguration(conf)

@@ -1,47 +1,29 @@
 /*
-Package config defines types for application configuration.
+Package schuko defines types for application configuration and tracing.
+Application configuration is addressed by quite a lot of go libraries out there.
+We do not intend to re-invent the wheel, but rather need a layer on top of existing
+libraries.  In particular, we'll integrate logging/tracing-configuration, making it
+easy to re-configure between development and production use.
 
-There is no init() call to set up configuration a priori. The reason
+There is no init-call to set up configuration a priori. The reason
 is to avoid coupling to a specific configuration framework, but rather
 relay this decision to the client.
 
-Please refer to package schuko.gconf for concrete usage.
 
-BSD License
+License
 
-Copyright (c) 2017–21, Norbert Pillmayer
+Governed by a 3-Clause BSD license. License file may be found in the root
+folder of this module.
 
-All rights reserved.
+Copyright © 2017–2021 Norbert Pillmayer <norbert@pillmayer.com>
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions
-are met:
-
-1. Redistributions of source code must retain the above copyright
-notice, this list of conditions and the following disclaimer.
-
-2. Redistributions in binary form must reproduce the above copyright
-notice, this list of conditions and the following disclaimer in the
-documentation and/or other materials provided with the distribution.
-
-3. Neither the name of this software nor the names of its contributors
-may be used to endorse or promote products derived from this software
-without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
+*/
 package schuko
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/npillmayer/schuko/tracing"
@@ -92,4 +74,111 @@ func GetAdapterFromConfiguration(conf Configuration) tracing.Adapter {
 		adapter = gologadapter.GetAdapter()
 	}
 	return adapter
+}
+
+// LocateConfig searches configuration files at “natural” configuration locations, which
+// are OS-dependent (see os.UserConfigDir).
+// The application is given by a tag name, which will be used to search for
+// existing directories and files, and an optional pattern.
+// Files will have to match one of:
+//
+//    <pattern>.<suffix>    // if pattern is given
+//    <tag>.<suffix>        // if no pattern
+//    config.<suffix>       // if no pattern
+//    .<tag>.<suffix>       // for $HOME only and no pattern
+//
+// Allowed file types are given as argument `suffixes``.
+//
+// Example: An app uses the tag 'myapp'. On a *nix-system the configuration may
+// be searched for at
+//    $HOME/.config/myapp/config.*
+//    $HOME/.config/myapp/myapp.*
+//    $HOME/.myapp.*
+//
+// On MacOS it will be searched for in
+//    $HOME/Library/Application Support/MyApp/config.*
+//
+func LocateConfig(appTag string, pattern string, suffixes []string) (bool, []string) {
+	if appTag == "" || len(suffixes) == 0 {
+		return false, nil
+	}
+	tag := strings.ToLower(appTag)
+
+	var d []os.DirEntry
+	var found bool
+	var dir string
+	var dirs []string
+
+	homedir, errH := os.UserHomeDir()
+	confdir, err := os.UserConfigDir()
+
+	if err == nil && (errH == nil && confdir != homedir) {
+		dir = filepath.Join(confdir, appTag)
+		if d, err = os.ReadDir(dir); err == nil {
+			if found, dirs = dirMatch(dir, d, tag, pattern, suffixes); found {
+				return found, dirs
+			}
+		}
+		dir = filepath.Join(confdir, tag)
+		if d, err = os.ReadDir(dir); err == nil {
+			if found, dirs = dirMatch(dir, d, tag, pattern, suffixes); found {
+				return found, dirs
+			}
+		}
+	}
+	if errH != nil {
+		return false, nil
+	}
+	dir = filepath.Join(homedir, ".config", tag)
+	if d, err = os.ReadDir(dir); err == nil {
+		// look for ~/.config/myapp/*
+		if found, dirs = dirMatch(dir, d, tag, pattern, suffixes); found {
+			return found, dirs
+		}
+	}
+	if d, err = os.ReadDir(homedir); err == nil {
+		// look for ~/.myapp.*
+		if found, dirs = dirMatch(homedir, d, tag, pattern, suffixes); found {
+			return found, dirs
+		}
+	}
+	return false, nil
+}
+
+func dirMatch(dir string, d []os.DirEntry, tag, pattern string, suffixes []string) (bool, []string) {
+	m := []string{}
+	glob1 := "config.*"
+	glob2 := tag + ".*"
+	glob3 := "." + tag + ".*"
+	for _, e := range d {
+		fname := filepath.Base(e.Name())
+		if pattern != "" {
+			if fm(pattern, fname) {
+				ext := strings.TrimLeft(filepath.Ext(fname), ".")
+				for _, s := range suffixes {
+					if ext == s {
+						m = append(m, filepath.Join(dir, fname))
+						break
+					}
+				}
+			}
+		} else if fm(glob1, fname) || fm(glob2, fname) || fm(glob3, fname) {
+			ext := strings.TrimLeft(filepath.Ext(fname), ".")
+			for _, s := range suffixes {
+				if ext == s {
+					m = append(m, filepath.Join(dir, fname))
+					break
+				}
+			}
+		}
+	}
+	if len(m) > 0 {
+		return true, m
+	}
+	return false, nil
+}
+
+func fm(pattern, name string) bool {
+	ok, _ := filepath.Match(pattern, name)
+	return ok
 }

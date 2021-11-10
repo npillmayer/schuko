@@ -5,7 +5,8 @@ import (
 
 	"github.com/npillmayer/schuko"
 	"github.com/npillmayer/schuko/gconf"
-	"github.com/npillmayer/schuko/testadapter"
+	"github.com/npillmayer/schuko/gtrace"
+	"github.com/npillmayer/schuko/schukonf/testadapter"
 	"github.com/npillmayer/schuko/tracing"
 	"github.com/npillmayer/schuko/tracing/gotestingadapter"
 )
@@ -28,6 +29,6 @@ func Test2(t *testing.T) {
 	gconf.Initialize(c)
 	teardown := gotestingadapter.RedirectTracing(t)
 	defer teardown()
-	tracing.EngineTracer.P("key", "value").Errorf("This is a test")
+	gtrace.EngineTracer.P("key", "value").Errorf("This is a test")
 	// output only seen with -v flag turned on
 }

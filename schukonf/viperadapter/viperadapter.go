@@ -3,45 +3,18 @@ Package viperadapter is for application configuration.
 
 All configuration is started explicitely with a call to
 
-	schuko.Initialize(viperadapter.New()).
+	schuko.Initialize(viperadapter.New("myconf")).
 
-There is no init() call to set up configuration a priori. The reason
+There is no init-call to set up configuration a priori. The reason
 is to avoid coupling to a specific configuration framework, but rather
 relay this decision to the client.
 
+License
 
-BSD License
+Governed by a 3-Clause BSD license. License file may be found in the root
+folder of this module.
 
-Copyright (c) 2017–21, Norbert Pillmayer
-
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions
-are met:
-
-1. Redistributions of source code must retain the above copyright
-notice, this list of conditions and the following disclaimer.
-
-2. Redistributions in binary form must reproduce the above copyright
-notice, this list of conditions and the following disclaimer in the
-documentation and/or other materials provided with the distribution.
-
-3. Neither the name of this software nor the names of its contributors
-may be used to endorse or promote products derived from this software
-without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+Copyright © 2017–2021 Norbert Pillmayer <norbert@pillmayer.com>
 
 */
 package viperadapter
@@ -92,7 +65,7 @@ func (c *VConf) InitConfigPath() {
 	viper.AddConfigPath("$HOME/." + c.name) // call multiple times to add many search paths
 	err := viper.ReadInConfig()             // Find and read the config file
 	if err != nil {                         // Handle errors reading the config file
-		panic(fmt.Errorf("Fatal error config file: %s", err))
+		panic(fmt.Errorf("fatal error reading config file: %s", err.Error()))
 	}
 }
 

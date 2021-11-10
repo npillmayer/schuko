@@ -40,7 +40,7 @@ import (
 
 	"github.com/npillmayer/schuko"
 	"github.com/npillmayer/schuko/gconf"
-	"github.com/npillmayer/schuko/testadapter"
+	"github.com/npillmayer/schuko/schukonf/testadapter"
 	"github.com/npillmayer/schuko/tracing/gotestingadapter"
 )
 
