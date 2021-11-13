@@ -1,54 +1,47 @@
 /*
-Package tracing defines an interface used by all other packages.
+Package tracing abstracts away details of application logging by
+decoupling modules and applications from concrete logging implementations.
 
-Tracing/logging is a cross cutting concern. Relying on a specific package
-for such a low-level task will create too tight a coupling—more abstract
+Logging/tracing/tracing is a cross-cutting concern. Relying on a specific package
+for such a low-level task will create too tight a coupling: higher-level
 classes/packages are infected with log classes/packages.
+That is relevant especially in the context of main applications depending
+on external supporting modules, where these modules might want to perform
+logging in a specific way incompatible with the main application. For example,
+the main application might want to use `logrus` logging, while a supporting
+external module logs using the Go standard logger. This is the reason for
+the existence of `commons-logging` and the `log4j2` API-definition in the Java
+world.
 
-Sub-packages of tracing will implement concrete tracers.
-Additionally, this package will provide helpers for more descriptive
-logging output, to be used with any concrete tracing/logging class.
+Adapters to concrete logging-implementations are made available by sub-packages of
+package `tracing`. The core package `tracing` does not bind to any specific
+implementation and creates no dependencies. Deciding for a concrete logger/tracer
+is completely up to the main application, where it's perfectly okay to create
+a logger/tracer-dependency.
 
 
-BSD License
+License
 
-Copyright (c) 2017–21, Norbert Pillmayer
+Governed by a 3-Clause BSD license. License file may be found in the root
+folder of this module.
 
-All rights reserved.
+Copyright © 2017–2021 Norbert Pillmayer <norbert@pillmayer.com>
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions
-are met:
-
-1. Redistributions of source code must retain the above copyright
-notice, this list of conditions and the following disclaimer.
-
-2. Redistributions in binary form must reproduce the above copyright
-notice, this list of conditions and the following disclaimer in the
-documentation and/or other materials provided with the distribution.
-
-3. Neither the name of this software nor the names of its contributors
-may be used to endorse or promote products derived from this software
-without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
+*/
 package tracing
 
 import (
+	"errors"
+	"fmt"
 	"io"
+	"io/fs"
+	"net/url"
 	"os"
+	"strings"
+	"sync"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/npillmayer/schuko"
 )
 
 // TraceLevel is a type for leveled tracing.
@@ -76,21 +69,23 @@ func (tl TraceLevel) String() string {
 
 // TraceLevelFromString will find a trace level from a string.
 // It will recognize "Debug", "Info" and "Error". Default is
-// LevelDebug.
+// LevelInfo, if `sl` is not recognized.
+//
+// String comparison is case-insensitive.
 func TraceLevelFromString(sl string) TraceLevel {
-	switch sl {
-	case "Debug":
+	switch strings.ToLower(sl) {
+	case "debug":
 		return LevelDebug
-	case "Info":
+	case "info":
 		return LevelInfo
-	case "Error":
+	case "error":
 		return LevelError
 	}
 	return LevelInfo // default
 }
 
 // Trace is an interface to be implemented by a concrete tracing adapter.
-// For examples refer to the sub-packages of package tracing.
+// For examples please refer to the sub-packages of package tracing.
 //
 // Tracers should support parameter/field tracing given by P(...).
 // An example would be
@@ -101,22 +96,146 @@ func TraceLevelFromString(sl string) TraceLevel {
 // By convention, no newlines at the end of tracing messages will be passed
 // by clients.
 type Trace interface {
-	P(string, interface{}) Trace // field tracing
-	Debugf(string, ...interface{})
-	Infof(string, ...interface{})
-	Errorf(string, ...interface{})
-	SetTraceLevel(TraceLevel)
-	GetTraceLevel() TraceLevel
-	SetOutput(io.Writer) // route tracing output to a writer
+	Errorf(string, ...interface{}) // trace on error level
+	Infof(string, ...interface{})  // trace on level ≥ info
+	Debugf(string, ...interface{}) // trace on level ≥ debug
+	P(string, interface{}) Trace   // parameter/context tracing
+	SetTraceLevel(TraceLevel)      // change the trace level
+	GetTraceLevel() TraceLevel     // get the currently active trace level
+	SetOutput(io.Writer)           // route tracing output to a writer
 }
 
-// Tracefile is the gloabl file where tracing goes to.
+// Tracefile is the global file where tracing goes to.
 // If tracing goes to a file (globally), variable Tracefile should
 // point to it. It need not be set if tracing goes to console.
-var Tracefile *os.File
+//
+// Deprecated: Please use your own app-wide variable.
+var Tracefile *os.File // deprecated, will be removed with V1
 
-// Adapter is a factory function to create a virgin Trace instance.
+type TraceSelector interface {
+	Tracer(which string) Trace
+}
+
+// SetTraceFactory sets a global TraceSelector.
+//
+// The use of a global TraceSelector is not mandatory. The default implementation
+// returns a no-op tracer for every call.
+//
+// See also function Select.
+func SetTraceSelector(sel TraceSelector) {
+	selectorMutex.Lock()
+	defer selectorMutex.Unlock()
+	selector = sel
+}
+
+var selector TraceSelector
+var selectorMutex = &sync.RWMutex{} // guard selector
+
+type selectnoOpTracer struct{}
+
+func (snop selectnoOpTracer) Tracer(string) Trace {
+	return noOpTrace{}
+}
+
+// Select returns the currently active TraceSelector.
+func Select() TraceSelector {
+	selectorMutex.RLock()
+	defer selectorMutex.RUnlock()
+	if selector != nil {
+		return selector
+	}
+	return selectnoOpTracer{}
+}
+
+// Adapter is a factory function to create a Trace instance.
 type Adapter func() Trace
+
+var knownTraceAdapters = map[string]Adapter{
+	"nop": func() Trace {
+		return noOpTrace{}
+	},
+}
+var adapterMutex = &sync.RWMutex{} // guard knownTraceAdapters[]
+
+// RegisterTraceAdapter is an extension point for clients who want to use
+// their own tracing adapter implementation.
+// `key` will be used at configuration initialization time to identify
+// this adapter, e.g. in configuration files.
+//
+// Clients will have to call this before any call to tracing-initialization,
+// otherwise the adapter cannot be found.
+func RegisterTraceAdapter(key string, adapter Adapter, replace bool) {
+	adapterMutex.Lock()
+	defer adapterMutex.Unlock()
+	Infof("registering tracing type %q\n", key)
+	current, ok := knownTraceAdapters[key]
+	if !ok || current == nil || replace {
+		fmt.Printf("setting tracing type %q\n", key)
+		knownTraceAdapters[key] = adapter
+	}
+}
+
+// GetAdapterFromConfiguration gets the concrete tracing implementation adapter
+// from the appcation configuration. The configuration key is "tracing.adapter",
+// and if that fails "tracing".
+//
+// The value must be one of the known tracing adapter keys.
+// if the value is not registered, it
+// defaults to a minimalistic (bare bones) tracer. Please refer also to
+// `tracing.Root()`.
+func GetAdapterFromConfiguration(conf schuko.Configuration) Adapter {
+	adapterPackage := conf.GetString("tracing.adapter")
+	if adapterPackage == "" {
+		adapterPackage = conf.GetString("tracing")
+	}
+	adapterMutex.RLock()
+	defer adapterMutex.RUnlock()
+	adapter, ok := knownTraceAdapters[adapterPackage]
+	if !ok || adapter == nil {
+		Debugf("no adapter found for tracing type %q\n", adapterPackage)
+		adapter = knownTraceAdapters["bare"]
+	}
+	return adapter
+}
+
+// Destination opens a tracing destination as an io.Writer. dest may be one of
+//
+// a) literals "Stdout" or "Stderr"
+//
+// b) a file URI ("file: //my.log")
+//
+// More to come.
+//
+func Destination(dest string) (io.WriteCloser, error) {
+	switch strings.ToLower(dest) {
+	case "stdout":
+		return os.Stdout, nil
+	case "stderr":
+		return os.Stderr, nil
+	}
+	u, err := url.Parse(dest)
+	if err != nil {
+		return os.Stderr, err
+	}
+	if strings.ToLower(u.Scheme) == "file" {
+		fname := u.Path
+		if fname == "" {
+			fname = u.Host
+		}
+		f, err := os.OpenFile(fname, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+		if err == nil {
+			return f, nil
+		}
+		if errors.Is(err, fs.ErrNotExist) {
+			return os.Create(fname)
+		} else {
+			return nil, err
+		}
+	}
+	return os.Stderr, err
+}
+
+// --- Dumping values to trace -----------------------------------------------
 
 // With prepares to dump a data structure to a Trace.
 // t may not be nil.
@@ -125,23 +244,71 @@ type Adapter func() Trace
 //
 //     tracing.With(mytracer).Dump(anObject)
 //
-// Dumping uses https://github.com/davecgh/go-spew .
-// Dump() is in level Debug.
-func With(t Trace) dumper {
-	return dumper{&t}
+// Dump accepts interface{};
+// it uses 'davecgh/go-spew'.
+// Dump(…) will not produce output with t having set a level above LevelDebug.
+func With(t Trace) _Dumper {
+	return _Dumper{&t}
 }
 
 // Helper type for dumping of objects.  Created by calls to With().
-type dumper struct {
+type _Dumper struct {
 	tracer *Trace
 }
 
 // Dump dumps an object using a tracer, in level Debug.
 //
 // d may not be nil.
-func (d dumper) Dump(name string, obj interface{}) {
+func (d _Dumper) Dump(name string, obj interface{}) {
 	if (*d.tracer).GetTraceLevel() >= LevelDebug {
 		str := spew.Sdump(obj)
 		(*d.tracer).Debugf(name + " = " + str)
 	}
 }
+
+// --- Tracing facade --------------------------------------------------------
+
+// Debugf traces at level LevelDebug to the global default tracer.
+// This is part of a global tracing facade.
+func Debugf(msg string, args ...interface{}) {
+	Select().Tracer("root").Debugf(msg, args...)
+}
+
+// Infof traces at level LevelInfo to the global default tracer.
+// This is part of a global tracing facade.
+func Infof(msg string, args ...interface{}) {
+	Select().Tracer("root").Infof(msg, args...)
+}
+
+// Errorf traces at level LevelError to the global default tracer.
+// This is part of a global tracing facade.
+func Errorf(msg string, args ...interface{}) {
+	Select().Tracer("root").Errorf(msg, args...)
+}
+
+// P performs P on the global default tracer (field tracing).
+// Field tracing sets a context for a tracing message.
+// This is part of a global tracing facade.
+func P(k string, v interface{}) Trace {
+	r := Select().Tracer("root")
+	return r.P(k, v)
+}
+
+// ---------------------------------------------------------------------------
+
+// NoOpTrace returns a void Trace. This is the default for every global tracer.
+// Clients will have to use `SetTraceSelector` to change this.
+// This tracer will just do nothing.
+func NoOpTrace() Trace {
+	return noOpTrace{}
+}
+
+type noOpTrace struct{}
+
+func (nt noOpTrace) Debugf(string, ...interface{}) {}
+func (nt noOpTrace) Infof(string, ...interface{})  {}
+func (nt noOpTrace) Errorf(string, ...interface{}) {}
+func (nt noOpTrace) SetTraceLevel(TraceLevel)      {}
+func (nt noOpTrace) GetTraceLevel() TraceLevel     { return LevelError }
+func (nt noOpTrace) SetOutput(io.Writer)           {}
+func (nt noOpTrace) P(string, interface{}) Trace   { return nt }

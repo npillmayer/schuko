@@ -1,9 +1,10 @@
 /*
-Package viperadapter is for application configuration.
+Package viperadapter is for application configuration with spf13/viper.
 
 All configuration is started explicitely with a call to
 
-	schuko.Initialize(viperadapter.New("myconf")).
+	conf := viperadapter.New("myapp")
+	conf.InitDefaults()
 
 There is no init-call to set up configuration a priori. The reason
 is to avoid coupling to a specific configuration framework, but rather
@@ -21,6 +22,7 @@ package viperadapter
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/npillmayer/schuko"
 	"github.com/spf13/viper"
@@ -32,6 +34,7 @@ type VConf struct {
 }
 
 // New creates a new Viper configuration adapter.
+// `name` is used as a tag to locate application-configuration.
 func New(name string) *VConf {
 	return &VConf{name: name}
 }
@@ -42,34 +45,27 @@ func (c *VConf) Init() {
 	c.InitConfigPath()
 }
 
-// InitDefaults is usually called by Init().
+// InitDefaults sets up
 func (c *VConf) InitDefaults() {
 	viper.SetDefault("tracing", "go")
 	viper.SetDefault("tracingonline", true)
-	viper.SetDefault("tracingequations", "Error")
-	viper.SetDefault("tracingsyntax", "Error")
-	viper.SetDefault("tracingcommands", "Error")
-	viper.SetDefault("tracinginterpreter", "Error")
-	viper.SetDefault("tracinggraphics", "Error")
-
-	viper.SetDefault("tracingcapsules", "Error")
-	viper.SetDefault("tracingrestores", "Error")
-	viper.SetDefault("tracingchoices", true)
 }
 
 // InitConfigPath is usually called by Init().
+// It sets up a standard config path and searches for application configuration
+// files.
 func (c *VConf) InitConfigPath() {
-	viper.SetConfigName(c.name)             // name of config file (without extension)
-	viper.AddConfigPath(".")                // optionally look for config in the working directory
-	viper.AddConfigPath("$GOPATH/etc/")     // path to look for the config file in
-	viper.AddConfigPath("$HOME/." + c.name) // call multiple times to add many search paths
-	err := viper.ReadInConfig()             // Find and read the config file
-	if err != nil {                         // Handle errors reading the config file
-		panic(fmt.Errorf("fatal error reading config file: %s", err.Error()))
+	viper.SetConfigName(c.name)                    // name of config file (without extension)
+	viper.AddConfigPath(".")                       // optionally look for config in the working directory
+	viper.AddConfigPath("$HOME/." + c.name)        // call multiple times to add many search paths
+	viper.AddConfigPath("$HOME/.config/" + c.name) // call multiple times to add many search paths
+	err := viper.ReadInConfig()                    // Find and read the config file
+	if err != nil {                                // Handle errors reading the config file
+		fmt.Fprintf(os.Stderr, "error reading config file: %s", err.Error())
 	}
 }
 
-// Set overrides any configuration values set from the environment.
+// Set overrides any configuration values.
 func (c *VConf) Set(key string, value interface{}) {
 	viper.Set(key, value)
 }
@@ -95,6 +91,8 @@ func (c *VConf) GetBool(key string) bool {
 }
 
 // IsInteractive is a predicate: are we running in interactive mode?
+//
+// Deprecated: A custom configuration key should be used instead.
 func (c *VConf) IsInteractive() bool {
 	return viper.GetBool("tracingonline")
 }

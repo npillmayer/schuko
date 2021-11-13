@@ -5,7 +5,8 @@ Package koanfadapter is for application configuration.
 
 All configuration is started explicitely with a call to
 
-	schuko.Initialize(koanfadapter.New(k)).
+	conf := koanfadapter.New(…)
+	conf.InitDefaults(conf)
 
 There is no init() call to set up configuration a priori. The reason
 is to avoid coupling to a specific configuration framework, but rather
@@ -39,14 +40,17 @@ type KConf struct {
 	suffixes []string
 }
 
-// New creates a new koanf configuration adapter.
-// If appTag is given, configuration files are searched for at system-dependent
-// standard locations, using the appTag for indentification.
+// New creates a new koanf configuration adapter. If k is nil, a new Koanf
+// will be created, with '.' as an item separator.
 //
-// Clients can suppress this behaviour by providing an empty appTag.
-// See schuko.LocateConfig for details.
+// If appTag and suffixes are given, configuration files are searched for at
+// system-dependent standard locations, using the appTag for indentification
+// (please refer to the description of koanfadapter.InitDefaults).
 //
 func New(k *koanf.Koanf, appTag string, suffixes []string) *KConf {
+	if k == nil {
+		k = koanf.New(".")
+	}
 	return &KConf{
 		k:        k,
 		tag:      appTag,
@@ -54,19 +58,31 @@ func New(k *koanf.Koanf, appTag string, suffixes []string) *KConf {
 	}
 }
 
+// Koanf returns the embedded Koanf configuration-object.
+func (c *KConf) Koanf() *koanf.Koanf {
+	return c.k
+}
+
 // Init is usually called by schuko.Initialize()
-func (c *KConf) Init() {
-	c.InitDefaults()
+// func (c *KConf) Init() {
+//     c.InitDefaults()
+// }
+
+// InitDefaults loads initial configuration settings. For koanf, it does two things:
+//
+// (1) It sets the default tracer to the builtin Go log
+//
+// (2) It loads application-specific configuration from
+//     “natural” configuration locations, if any are found. It does this by calling
+//     `InitFromDefaultFile()`
+//
+func (c *KConf) InitDefaults() {
+	c.k.Load(confmap.Provider(map[string]interface{}{
+		"tracing.adapter": "go",
+	}, c.k.Delim()), nil)
 	if c.tag != "" {
 		c.InitFromDefaultFile()
 	}
-}
-
-// InitDefaults is usually called by Init().
-func (c *KConf) InitDefaults() {
-	c.k.Load(confmap.Provider(map[string]interface{}{
-		"tracing": "go",
-	}, c.k.Delim()), nil)
 }
 
 // InitFromDefaultFile searches at OS-dependent
@@ -75,7 +91,9 @@ func (c *KConf) InitDefaults() {
 // Clients can suppress this behaviour by providing an empty appTag or
 // an empty suffixes array during creation of the adapter.
 //
-// InitFromDefaultFile is usually called by Init().
+// InitFromDefaultFile is usually not called directly by clients, but
+// rather by InitDefaults. It is made public to enable clients to override
+// it.
 //
 func (c *KConf) InitFromDefaultFile() {
 	ok, files := schuko.LocateConfig(c.tag, "", c.suffixes)
@@ -92,9 +110,9 @@ func (c *KConf) InitFromDefaultFile() {
 		case ".tml", ".toml":
 			panic(fmt.Sprintf("do not know how to decode %q-files (%q)", ext, path))
 		case ".nt":
-			//TODO
+			//TODO remove dependency to go log
 			if err := c.k.Load(file.Provider(path), NestedTextParser{}); err != nil {
-				log.Fatalf("error loading NT config: %v", err)
+				log.Fatalf("error loading NestedText format: %v", err)
 			}
 		default:
 			panic(fmt.Sprintf("do not know how to decode %q-files (%q)", ext, path))
@@ -130,6 +148,8 @@ func (c *KConf) GetBool(key string) bool {
 }
 
 // IsInteractive is a predicate: are we running in interactive mode?
+//
+// Deprecated: A custom configuration key should be used instead.
 func (c *KConf) IsInteractive() bool {
 	return true
 }

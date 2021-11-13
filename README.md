@@ -1,3 +1,7 @@
+## Warning
+
+Under heavy re-construction, heading to V1.
+
 ## Adapters for Configuration and Logging in Go
 
 Application configuration is addressed by quite a lot of go libraries out there.

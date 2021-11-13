@@ -9,6 +9,10 @@ There is no init-call to set up configuration a priori. The reason
 is to avoid coupling to a specific configuration framework, but rather
 relay this decision to the client.
 
+Attention
+
+As this package nears V1, some re-structuring happened. Please look out for
+`deprecated` tags.
 
 License
 
@@ -25,24 +29,21 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-
-	"github.com/npillmayer/schuko/tracing"
-	"github.com/npillmayer/schuko/tracing/gologadapter"
 )
 
 // Configuration is an interface to be implemented by every configuration
 // adapter.
 type Configuration interface {
-	InitDefaults()               // initialize key/value pairs
+	InitDefaults()               // initialize base set of key/value pairs
 	IsSet(key string) bool       // is a config key set?
 	GetString(key string) string // get config value as string
 	GetInt(key string) int       // get config value as integer
 	GetBool(key string) bool     // get config value as boolean
-	IsInteractive() bool         // Are we running in interactive mode?
+	IsInteractive() bool         // deprecated!
 }
 
-var knownTraceAdapters = map[string]tracing.Adapter{
-	"go": gologadapter.GetAdapter(),
+var knownTraceAdapters = map[string]interface{}{
+	//"go": gologadapter.GetAdapter(),
 	//"logrus": logrusadapter.GetAdapter(), // now to be set by AddTraceAdapter()
 }
 var adapterMutex = &sync.RWMutex{} // guard knownTraceAdapters[]
@@ -54,7 +55,10 @@ var adapterMutex = &sync.RWMutex{} // guard knownTraceAdapters[]
 //
 // Clients will have to call this before any call to tracing-initialization,
 // otherwise the adapter cannot be found.
-func AddTraceAdapter(key string, adapter tracing.Adapter) {
+//
+// Deprecated: This moves to package tracing RegisterTraceAdapter.
+//
+func AddTraceAdapter(key string, adapter interface{}) {
 	adapterMutex.Lock()
 	defer adapterMutex.Unlock()
 	knownTraceAdapters[key] = adapter
@@ -65,14 +69,17 @@ func AddTraceAdapter(key string, adapter tracing.Adapter) {
 //
 // The value must be one of the known tracing adapter keys.
 // Default is an adapter for the Go standard log package.
-func GetAdapterFromConfiguration(conf Configuration) tracing.Adapter {
+//
+// Deprecated: This moves to package tracing.
+//
+func GetAdapterFromConfiguration(conf Configuration) interface{} {
 	adapterPackage := conf.GetString("tracing")
 	adapterMutex.RLock()
 	defer adapterMutex.RUnlock()
 	adapter := knownTraceAdapters[adapterPackage]
-	if adapter == nil {
-		adapter = gologadapter.GetAdapter()
-	}
+	// if adapter == nil {
+	// 	adapter = gologadapter.GetAdapter() // removed this coupling to Go log
+	// }
 	return adapter
 }
 
@@ -96,7 +103,7 @@ func GetAdapterFromConfiguration(conf Configuration) tracing.Adapter {
 //    $HOME/.myapp.*
 //
 // On MacOS it will be searched for in
-//    $HOME/Library/Application Support/MyApp/config.*
+//    $HOME/Library/Application Support/MyApp/
 //
 func LocateConfig(appTag string, pattern string, suffixes []string) (bool, []string) {
 	if appTag == "" || len(suffixes) == 0 {

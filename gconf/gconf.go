@@ -1,5 +1,5 @@
 /*
-Package gconf initializes a global application configuration.
+Package gconf initializes a global application configuration (deprecated).
 
 Configuration
 
@@ -16,43 +16,18 @@ clients will have to use/implement an adapter to tracing.Trace (please
 refer to the documentation for package tracing as well as to implementations
 of adapters, e.g. for Go log and for logrus).
 
-BSD License
 
-Copyright (c) 2017–21, Norbert Pillmayer
+License
 
-All rights reserved.
+Governed by a 3-Clause BSD license. License file may be found in the root
+folder of this module.
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions
-are met:
+Copyright © 2017–2021 Norbert Pillmayer <norbert@pillmayer.com>
 
-1. Redistributions of source code must retain the above copyright
-notice, this list of conditions and the following disclaimer.
-
-2. Redistributions in binary form must reproduce the above copyright
-notice, this list of conditions and the following disclaimer in the
-documentation and/or other materials provided with the distribution.
-
-3. Neither the name of this software nor the names of its contributors
-may be used to endorse or promote products derived from this software
-without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
+*/
 package gconf
 
 import (
-	"os"
-
 	"github.com/npillmayer/schuko"
 	"github.com/npillmayer/schuko/gtrace"
 	"github.com/npillmayer/schuko/tracing"
@@ -80,7 +55,7 @@ func (nc noconfig) IsInteractive() bool         { return false }
 func Initialize(conf schuko.Configuration) {
 	globalConf = conf
 	globalConf.InitDefaults()
-	InitTracing(schuko.GetAdapterFromConfiguration(conf))
+	InitTracing(tracing.GetAdapterFromConfiguration(conf))
 }
 
 // InitTracing sets up all the global module tracers, reading trace levels
@@ -97,26 +72,11 @@ func InitTracing(adapter tracing.Adapter) {
 // It is exported as it may be useful in testing scenarios.
 func ConfigureTracing(inputfilename string) {
 	SetDefaultTracingLevels() // set default trace levels from configuration
-	if GetBool("tracingonline") {
-		if inputfilename != "" {
-			file, err := os.Create("__typrescript.log")
-			if err != nil {
-				gtrace.CommandTracer.Errorf("cannot open tracefile, tracing to stderr")
-			} else {
-				tracing.Tracefile = file
-			}
-		}
-		if tracing.Tracefile != nil {
-			gtrace.CommandTracer.SetOutput(tracing.Tracefile)
-			gtrace.EquationsTracer.SetOutput(tracing.Tracefile)
-			gtrace.SyntaxTracer.SetOutput(tracing.Tracefile)
-			gtrace.InterpreterTracer.SetOutput(tracing.Tracefile)
-			gtrace.GraphicsTracer.SetOutput(tracing.Tracefile)
-			gtrace.ScriptingTracer.SetOutput(tracing.Tracefile)
-			gtrace.CoreTracer.SetOutput(tracing.Tracefile)
-			gtrace.EngineTracer.SetOutput(tracing.Tracefile)
-		}
-	}
+	// if GetBool("tracingonline") {
+	// 	if inputfilename != "" {
+	// 		// do nothing any more
+	// 	}
+	// }
 	gtrace.InterpreterTracer.P("level", gtrace.InterpreterTracer.GetTraceLevel()).Infof("Interpreter-Trace is alive")
 	gtrace.CommandTracer.P("level", gtrace.CommandTracer.GetTraceLevel()).Infof("Command-Trace is alive")
 	gtrace.EquationsTracer.P("level", gtrace.EquationsTracer.GetTraceLevel()).Infof("Equations-Trace is alive")

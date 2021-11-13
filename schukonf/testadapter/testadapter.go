@@ -1,47 +1,31 @@
 /*
 Package testadapter is for application configuration during tests.
 
-Clients will start configuration explicitely with a call to
+Objects of this package may be used by clients directly, but most of the time
+they will be instantiated transparently by calls to `testconfig.QuickConfig`.
+Clients will usually follow a pattern along the line of:
 
-	gconf.Initialize(testadapter.New())
+    import "github.com/npillmayer/schuko/testconfig"
+
+    func TestSomething(t *testing.T) {
+         teardown := testconfig.QuickConfig(t)
+         defer teardown()
+         …
+     }
 
 There is no init() call to set up configuration a priori. The reason
 is to avoid coupling to a specific configuration framework, but rather
 relay this decision to the client.
 
 
-BSD License
+License
 
-Copyright (c) 2017–21, Norbert Pillmayer
+Governed by a 3-Clause BSD license. License file may be found in the root
+folder of this module.
 
-All rights reserved.
+Copyright © 2017–2021 Norbert Pillmayer <norbert@pillmayer.com>
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions
-are met:
-
-1. Redistributions of source code must retain the above copyright
-notice, this list of conditions and the following disclaimer.
-
-2. Redistributions in binary form must reproduce the above copyright
-notice, this list of conditions and the following disclaimer in the
-documentation and/or other materials provided with the distribution.
-
-3. Neither the name of this software nor the names of its contributors
-may be used to endorse or promote products derived from this software
-without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
+*/
 package testadapter
 
 import (
@@ -63,32 +47,21 @@ func New() *Conf {
 }
 
 // Initialize initializes a configuration, populating it with defaullt values.
+// It just calls `InitDefaults`.
 func (c *Conf) Initialize() {
 	c.InitDefaults()
 }
 
-// InitDefaults is usually called by Init().
+// InitDefaults is called to fill the test-configuration with sensible defaults
+// for testing. It will set the default tracer to a gotestingadapter instance.
 func (c *Conf) InitDefaults() {
 	m := c.values
 	m["tracing"] = "test"
-	m["tracingonline"] = "false"
-	m["tracingequations"] = "Error"
-	m["tracingsyntax"] = "Error"
-	m["tracingcommands"] = "Error"
-	m["tracinginterpreter"] = "Error"
-	m["tracinggraphics"] = "Error"
-	m["tracingscripting"] = "Error"
-	m["tracingcore"] = "Error"
-	m["tracingengine"] = "Error"
-
-	m["tracingcapsules"] = "Error"
-	m["tracingrestores"] = "Error"
-	m["tracingchoices"] = "true"
 	etc := os.Getenv("GOPATH") + "/etc"
 	m["etc-dir"] = etc
 }
 
-// Set is part of the interface Configuration
+// Set overrides the config value for key.
 func (c *Conf) Set(key string, value string) (oldval string) {
 	oldval = c.values[key]
 	c.values[key] = value
@@ -126,7 +99,9 @@ func (c *Conf) GetBool(key string) bool {
 	return strings.EqualFold(v, "true")
 }
 
-// IsInteractive is part of the interface Configuration
+// IsInteractive is a predicate: are we running in interactive mode?
+//
+// Deprecated: A custom configuration key should be used instead.
 func (c *Conf) IsInteractive() bool { return false }
 
 var _ schuko.Configuration = &Conf{}
