@@ -1,5 +1,5 @@
 /*
-Package testadapter is for application configuration during tests.
+Package testadapter is for application configuration during tests (deprecated).
 
 Objects of this package may be used by clients directly, but most of the time
 they will be instantiated transparently by calls to `testconfig.QuickConfig`.
@@ -37,11 +37,17 @@ import (
 )
 
 // Conf represents a lightweight configuration suited for testing.
+//
+// Deprecated: Use testconfig Conf instead.
+//
 type Conf struct {
 	values map[string]string
 }
 
 // New creates a new configuration suited for testing.
+//
+// Deprecated: Use testconfig New instead.
+//
 func New() *Conf {
 	return &Conf{values: make(map[string]string)}
 }
@@ -56,7 +62,7 @@ func (c *Conf) Initialize() {
 // for testing. It will set the default tracer to a gotestingadapter instance.
 func (c *Conf) InitDefaults() {
 	m := c.values
-	m["tracing"] = "test"
+	m["tracing.adapter"] = "test"
 	etc := os.Getenv("GOPATH") + "/etc"
 	m["etc-dir"] = etc
 }

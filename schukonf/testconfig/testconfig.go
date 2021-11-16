@@ -1,6 +1,5 @@
 /*
-Package testconfig provides configuration and tracing suitable for tests
-(deprecated).
+Package testconfig provides configuration and tracing suitable for tests.
 
 The usual usage-pattern will look like this:
 
@@ -23,9 +22,8 @@ package testconfig
 import (
 	"testing"
 
-	"github.com/npillmayer/schuko"
-	"github.com/npillmayer/schuko/gconf"
 	"github.com/npillmayer/schuko/schukonf/testadapter"
+	"github.com/npillmayer/schuko/tracing"
 	"github.com/npillmayer/schuko/tracing/gotestingadapter"
 )
 
@@ -41,10 +39,8 @@ import (
 //          …
 //      }
 //
-// Deprecated: This moves to schukonf testconfig.
-//
 func QuickConfig(t *testing.T, maps ...map[string]string) func() {
-	schuko.AddTraceAdapter("test", gotestingadapter.GetAdapter())
+	tracing.RegisterTraceAdapter("test", gotestingadapter.GetAdapter(), true)
 	c := testadapter.New()
 	c.Set("tracing", "test")
 	for _, m := range maps {
@@ -52,6 +48,5 @@ func QuickConfig(t *testing.T, maps ...map[string]string) func() {
 			c.Set(k, v)
 		}
 	}
-	gconf.Initialize(c)
 	return gotestingadapter.RedirectTracing(t)
 }

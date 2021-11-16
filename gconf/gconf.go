@@ -55,7 +55,7 @@ func (nc noconfig) IsInteractive() bool         { return false }
 func Initialize(conf schuko.Configuration) {
 	globalConf = conf
 	globalConf.InitDefaults()
-	InitTracing(tracing.GetAdapterFromConfiguration(conf))
+	InitTracing(tracing.GetAdapterFromConfiguration(conf, ""))
 }
 
 // InitTracing sets up all the global module tracers, reading trace levels

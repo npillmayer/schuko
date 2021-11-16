@@ -1,7 +1,5 @@
 /*
-Work in progress.
-
-Package koanfadapter is for application configuration.
+Package koanfadapter is for application configuration with knadh/koanf.
 
 All configuration is started explicitely with a call to
 
@@ -96,8 +94,8 @@ func (c *KConf) InitDefaults() {
 // it.
 //
 func (c *KConf) InitFromDefaultFile() {
-	ok, files := schuko.LocateConfig(c.tag, "", c.suffixes)
-	if !ok {
+	files := schuko.LocateConfig(c.tag, "", c.suffixes)
+	if len(files) == 0 {
 		return
 	}
 	for _, path := range files {

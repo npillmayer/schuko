@@ -25,6 +25,7 @@ Copyright © 2017–2021 Norbert Pillmayer <norbert@pillmayer.com>
 package schuko
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -94,7 +95,7 @@ func GetAdapterFromConfiguration(conf Configuration) interface{} {
 //    config.<suffix>       // if no pattern
 //    .<tag>.<suffix>       // for $HOME only and no pattern
 //
-// Allowed file types are given as argument `suffixes``.
+// Allowed file types are given as argument `suffixes`.
 //
 // Example: An app uses the tag 'myapp'. On a *nix-system the configuration may
 // be searched for at
@@ -102,16 +103,17 @@ func GetAdapterFromConfiguration(conf Configuration) interface{} {
 //    $HOME/.config/myapp/myapp.*
 //    $HOME/.myapp.*
 //
-// On MacOS it will be searched for in
+// On MacOS it would be searched for in
 //    $HOME/Library/Application Support/MyApp/
 //
-func LocateConfig(appTag string, pattern string, suffixes []string) (bool, []string) {
+func LocateConfig(appTag string, pattern string, suffixes []string) []string {
+	//
 	if appTag == "" || len(suffixes) == 0 {
-		return false, nil
+		return nil
 	}
 	tag := strings.ToLower(appTag)
 
-	var d []os.DirEntry
+	var d []fs.DirEntry
 	var found bool
 	var dir string
 	var dirs []string
@@ -123,36 +125,36 @@ func LocateConfig(appTag string, pattern string, suffixes []string) (bool, []str
 		dir = filepath.Join(confdir, appTag)
 		if d, err = os.ReadDir(dir); err == nil {
 			if found, dirs = dirMatch(dir, d, tag, pattern, suffixes); found {
-				return found, dirs
+				return dirs
 			}
 		}
 		dir = filepath.Join(confdir, tag)
 		if d, err = os.ReadDir(dir); err == nil {
 			if found, dirs = dirMatch(dir, d, tag, pattern, suffixes); found {
-				return found, dirs
+				return dirs
 			}
 		}
 	}
 	if errH != nil {
-		return false, nil
+		return nil
 	}
 	dir = filepath.Join(homedir, ".config", tag)
 	if d, err = os.ReadDir(dir); err == nil {
 		// look for ~/.config/myapp/*
 		if found, dirs = dirMatch(dir, d, tag, pattern, suffixes); found {
-			return found, dirs
+			return dirs
 		}
 	}
 	if d, err = os.ReadDir(homedir); err == nil {
 		// look for ~/.myapp.*
 		if found, dirs = dirMatch(homedir, d, tag, pattern, suffixes); found {
-			return found, dirs
+			return dirs
 		}
 	}
-	return false, nil
+	return nil
 }
 
-func dirMatch(dir string, d []os.DirEntry, tag, pattern string, suffixes []string) (bool, []string) {
+func dirMatch(dir string, d []fs.DirEntry, tag, pattern string, suffixes []string) (bool, []string) {
 	m := []string{}
 	glob1 := "config.*"
 	glob2 := tag + ".*"

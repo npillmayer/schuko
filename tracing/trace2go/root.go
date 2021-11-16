@@ -54,12 +54,13 @@ func Root() tracing.Trace {
 // ConfigureRoot configures the root tracer, given configuration conf.
 func ConfigureRoot(conf schuko.Configuration, prefixKey string, opts ...RootOption) error {
 	var err error
-	r := newRootTracer(conf, prefixKey) // create outside w-lock
+	r := newRootTracer(conf, prefixKey)
 	for _, opt := range opts {
 		if err := opt(r); err != nil {
 			return err
 		}
 	}
+	r.init()
 	mx.Lock()
 	defer mx.Unlock()
 	_, isBB := root.(*_BareBonesTrace)
@@ -72,6 +73,10 @@ func ConfigureRoot(conf schuko.Configuration, prefixKey string, opts ...RootOpti
 		root.Infof("welcome to the new root tracer")
 		if r.replaceChildren {
 			r := root.(*rootTracer)
+			childMx.Lock()
+			defer childMx.Unlock()
+			// 'range selectableTracers' creates a possible race condition
+			// therefore we lock childMx
 			for k := range selectableTracers {
 				ch := r.adapter()
 				prevCh := setTracer(k, ch)
@@ -105,12 +110,34 @@ func ReplaceTracers(replace bool) RootOption {
 	}
 }
 
+// AdapterKey will set a configuration key which, during initialization, will be used
+// to search for an adapter type. The key may optionally be set within the configuration passed
+// as an argument to ConfigureRoot.
+//
+// Use it like this:
+//
+//    err := ConfigureRoot(myconf, "", AdapterKey("look.for.this.adapter"))
+//
+// with a configuration setting of:
+//
+//    look.for.this.adapter: logrus
+//
+// Please see also tracing.GetAdapterFromConfiguration
+//
+func AdapterKey(key string) RootOption {
+	return func(r *rootTracer) error {
+		r.optAdapterKey = key
+		return nil
+	}
+}
+
 // --- Root tracer type ------------------------------------------------------
 
 type rootTracer struct {
 	tracing.Trace
 	config          schuko.Configuration
-	prefix          string
+	prefixKey       string
+	optAdapterKey   string
 	adapter         tracing.Adapter
 	replaceChildren bool
 }
@@ -127,11 +154,14 @@ type rootTracer struct {
 //
 func newRootTracer(conf schuko.Configuration, prefixKey string) *rootTracer {
 	t := &rootTracer{
-		config: conf,
-		prefix: prefixKey,
+		config:    conf,
+		prefixKey: prefixKey,
 	}
-	tracing.Infof("getting adapter from config: %q\n", conf.GetString("tracing"))
-	adapter := tracing.GetAdapterFromConfiguration(conf)
+	return t
+}
+
+func (t *rootTracer) init() {
+	adapter := tracing.GetAdapterFromConfiguration(t.config, t.optAdapterKey)
 	if adapter == nil {
 		adapter = func() tracing.Trace {
 			return &_BareBonesTrace{}
@@ -139,20 +169,32 @@ func newRootTracer(conf schuko.Configuration, prefixKey string) *rootTracer {
 	}
 	t.adapter = adapter // remember it for child traces
 	t.Trace = adapter()
-	if l := getValue(conf, prefixKey, "root"); l != "" {
+	if l := getValue(t.config, t.prefixKey, "root"); l != "" {
 		t.SetTraceLevel(tracing.TraceLevelFromString(l))
 	}
-	return t
 }
 
 // --- Integrate as tracing.Selector -----------------------------------------
 
-func (r *rootTracer) Tracer(name string) tracing.Trace {
+func Selector() tracing.TraceSelector {
+	return selector(trace2goSelector)
+}
+
+func trace2goSelector(name string) tracing.Trace {
 	return GetOrCreateTracer(name)
 }
 
+type selector func(string) tracing.Trace
+
+func (sel selector) Select(name string) tracing.Trace {
+	return sel(name)
+}
+
+var _ tracing.TraceSelector = selector(trace2goSelector)
+
 // --- Children tracers ------------------------------------------------------
 
+// We will manage a map of keys -> tracers.
 var childMx *sync.RWMutex = &sync.RWMutex{}
 var selectableTracers map[string]tracing.Trace = make(map[string]tracing.Trace, 10)
 
@@ -186,7 +228,7 @@ func NewTracer(name string, replace bool) (tracing.Trace, tracing.Trace) {
 	var trace tracing.Trace
 	if r, ok := Root().(*rootTracer); ok {
 		trace = r.adapter()
-		level := getValue(r.config, r.prefix, name)
+		level := getValue(r.config, r.prefixKey, name)
 		trace.SetTraceLevel(tracing.TraceLevelFromString(level))
 	} else {
 		return Root(), nil
@@ -209,9 +251,9 @@ func NewTracer(name string, replace bool) (tracing.Trace, tracing.Trace) {
 //
 // New tracers replacing existing ones will inherit their trace level.
 //
+// Not protected by childMx.
+//
 func setTracer(name string, trace tracing.Trace) tracing.Trace {
-	childMx.Lock()
-	defer childMx.Unlock()
 	prev, ok := selectableTracers[name]
 	selectableTracers[name] = trace
 	if !ok {

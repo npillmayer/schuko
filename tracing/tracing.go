@@ -1,6 +1,6 @@
 /*
-Package tracing abstracts away details of application logging by
-decoupling modules and applications from concrete logging implementations.
+Package tracing decouples modules and applications from concrete logging implementations.
+It abstracts away details of application logging.
 
 Logging/tracing/tracing is a cross-cutting concern. Relying on a specific package
 for such a low-level task will create too tight a coupling: higher-level
@@ -32,7 +32,6 @@ package tracing
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"io/fs"
 	"net/url"
@@ -113,7 +112,7 @@ type Trace interface {
 var Tracefile *os.File // deprecated, will be removed with V1
 
 type TraceSelector interface {
-	Tracer(which string) Trace
+	Select(which string) Trace
 }
 
 // SetTraceFactory sets a global TraceSelector.
@@ -133,18 +132,22 @@ var selectorMutex = &sync.RWMutex{} // guard selector
 
 type selectnoOpTracer struct{}
 
-func (snop selectnoOpTracer) Tracer(string) Trace {
+func (snop selectnoOpTracer) Select(string) Trace {
 	return noOpTrace{}
 }
 
-// Select returns the currently active TraceSelector.
-func Select() TraceSelector {
+// Select returns a Trace instance for a given key.
+// Initially a default implementation of a TraceSelector is installed which will
+// return a no-op tracer for every call, even for key "root".
+//
+// The use of a global TraceSelector is not mandatory.
+func Select(key string) Trace {
 	selectorMutex.RLock()
 	defer selectorMutex.RUnlock()
 	if selector != nil {
-		return selector
+		return selector.Select(key)
 	}
-	return selectnoOpTracer{}
+	return selectnoOpTracer{}.Select(key)
 }
 
 // Adapter is a factory function to create a Trace instance.
@@ -170,20 +173,21 @@ func RegisterTraceAdapter(key string, adapter Adapter, replace bool) {
 	Infof("registering tracing type %q\n", key)
 	current, ok := knownTraceAdapters[key]
 	if !ok || current == nil || replace {
-		fmt.Printf("setting tracing type %q\n", key)
 		knownTraceAdapters[key] = adapter
 	}
 }
 
 // GetAdapterFromConfiguration gets the concrete tracing implementation adapter
-// from the appcation configuration. The configuration key is "tracing.adapter",
+// from the appcation configuration. If optKey is non-empty it is used for
+// looking up the adapter type. Otherwise the default config key is used.
+// The default configuration key is "tracing.adapter",
 // and if that fails "tracing".
 //
-// The value must be one of the known tracing adapter keys.
-// if the value is not registered, it
-// defaults to a minimalistic (bare bones) tracer. Please refer also to
-// `tracing.Root()`.
-func GetAdapterFromConfiguration(conf schuko.Configuration) Adapter {
+// The value must be one of the known tracing adapter keys (see RegisterTraceAdapter).
+// If the key is not registered, Adapter
+// defaults to a minimalistic (bare bones) tracer.
+//
+func GetAdapterFromConfiguration(conf schuko.Configuration, optKey string) Adapter {
 	adapterPackage := conf.GetString("tracing.adapter")
 	if adapterPackage == "" {
 		adapterPackage = conf.GetString("tracing")
@@ -271,26 +275,26 @@ func (d _Dumper) Dump(name string, obj interface{}) {
 // Debugf traces at level LevelDebug to the global default tracer.
 // This is part of a global tracing facade.
 func Debugf(msg string, args ...interface{}) {
-	Select().Tracer("root").Debugf(msg, args...)
+	Select("root").Debugf(msg, args...)
 }
 
 // Infof traces at level LevelInfo to the global default tracer.
 // This is part of a global tracing facade.
 func Infof(msg string, args ...interface{}) {
-	Select().Tracer("root").Infof(msg, args...)
+	Select("root").Infof(msg, args...)
 }
 
 // Errorf traces at level LevelError to the global default tracer.
 // This is part of a global tracing facade.
 func Errorf(msg string, args ...interface{}) {
-	Select().Tracer("root").Errorf(msg, args...)
+	Select("root").Errorf(msg, args...)
 }
 
 // P performs P on the global default tracer (field tracing).
 // Field tracing sets a context for a tracing message.
 // This is part of a global tracing facade.
 func P(k string, v interface{}) Trace {
-	r := Select().Tracer("root")
+	r := Select("root")
 	return r.P(k, v)
 }
 

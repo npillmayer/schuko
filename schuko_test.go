@@ -1,5 +1,8 @@
 package schuko
 
+// TODO include XDG
+// for example:   https://github.com/adrg/xdg
+
 import (
 	"os"
 	"path/filepath"
@@ -36,8 +39,8 @@ func TestLocateConfig(t *testing.T) {
 
 	// now search
 	suffixes := []string{"json", "toml", "nt", "yml"}
-	ok, fileNames := LocateConfig(appTag, "", suffixes)
-	if !ok {
+	fileNames := LocateConfig(appTag, "", suffixes)
+	if len(fileNames) == 0 {
 		t.Errorf("expected 1 config file to be found, didn't")
 	} else {
 		for _, fn := range fileNames {
@@ -45,16 +48,16 @@ func TestLocateConfig(t *testing.T) {
 		}
 	}
 	suffixes = []string{"yml"}
-	ok, fileNames = LocateConfig(appTag, "my*.*", suffixes)
-	if !ok {
+	fileNames = LocateConfig(appTag, "my*.*", suffixes)
+	if len(fileNames) == 0 {
 		t.Errorf("expected 1 pattern file to be found, didn't")
 	} else {
 		for _, fn := range fileNames {
 			t.Logf("found config: %q", fn)
 		}
 	}
-	ok, _ = LocateConfig(appTag, "your*.*", suffixes)
-	if ok {
+	fileNames = LocateConfig(appTag, "your*.*", suffixes)
+	if len(fileNames) == 0 {
 		t.Errorf("expected no pattern file to be found")
 	}
 }
