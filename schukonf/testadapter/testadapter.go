@@ -46,7 +46,7 @@ type Conf struct {
 
 // New creates a new configuration suited for testing.
 //
-// Deprecated: Use testconfig New instead.
+// Deprecated: Use testconfig Conf instead.
 //
 func New() *Conf {
 	return &Conf{values: make(map[string]string)}

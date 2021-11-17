@@ -19,6 +19,12 @@ implementation and creates no dependencies. Deciding for a concrete logger/trace
 is completely up to the main application, where it's perfectly okay to create
 a logger/tracer-dependency.
 
+Resources
+
+https://dave.cheney.net/2015/11/05/lets-talk-about-logging
+
+https://dave.cheney.net/2017/01/23/the-package-level-logger-anti-pattern
+
 
 License
 
