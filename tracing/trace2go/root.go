@@ -78,6 +78,10 @@ func ConfigureRoot(conf schuko.Configuration, prefixKey string, opts ...RootOpti
 			// 'range selectableTracers' creates a possible race condition
 			// therefore we lock childMx
 			for k := range selectableTracers {
+				if k == "root" {
+					continue
+				}
+				r.Errorf("replacing tracer \"%s\"", k)
 				ch := r.adapter()
 				prevCh := setTracer(k, ch)
 				prevCh.Infof("replacing this tracer")
@@ -261,6 +265,19 @@ func setTracer(name string, trace tracing.Trace) tracing.Trace {
 	}
 	trace.SetTraceLevel(prev.GetTraceLevel())
 	return prev
+}
+
+// Teardown removes the trace2go root tracer and any existing child tracers,
+// and detaches trace2go from the tracing-facade (`tracing.Select(…)`).
+func Teardown() {
+	mx.Lock()
+	defer mx.Unlock()
+	fmt.Printf("Tearing down trace2go tracing\n")
+	childMx.Lock()
+	defer childMx.Unlock()
+	selectableTracers = make(map[string]tracing.Trace)
+	root = nil
+	tracing.SetTraceSelector(nil)
 }
 
 // --- Bare bones tracer -----------------------------------------------------

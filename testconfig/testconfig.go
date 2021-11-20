@@ -44,7 +44,7 @@ import (
 // Deprecated: This moves to schukonf testconfig.
 //
 func QuickConfig(t *testing.T, maps ...map[string]string) func() {
-	schuko.AddTraceAdapter("test", gotestingadapter.GetAdapter())
+	schuko.AddTraceAdapter("test", gotestingadapter.GetAdapter(t))
 	c := testadapter.New()
 	c.Set("tracing", "test")
 	for _, m := range maps {

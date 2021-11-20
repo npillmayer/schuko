@@ -61,7 +61,9 @@ import (
 	"io"
 	"testing"
 
+	"github.com/npillmayer/schuko/schukonf/testconfig"
 	"github.com/npillmayer/schuko/tracing"
+	"github.com/npillmayer/schuko/tracing/trace2go"
 )
 
 // Tracer is our adapter implementation which implements interface
@@ -76,9 +78,10 @@ var logLevelPrefix = []string{"ERROR ", "INFO  ", "DEBUG "}
 
 //var allTracers =
 
-// New creates a new Tracer instance based on a testing logger.
-func New() tracing.Trace {
+// New creates a new Tracer instance valid for a testing.T.
+func New(t *testing.T) tracing.Trace {
 	return &Tracer{
+		t:     t,
 		p:     "",
 		level: tracing.LevelError,
 	}
@@ -86,8 +89,15 @@ func New() tracing.Trace {
 
 // GetAdapter creates an adapter (i.e., factory for tracing.Trace) to
 // be used to initialize (global) tracers.
-func GetAdapter() tracing.Adapter {
-	return New
+func GetAdapter(t *testing.T) tracing.Adapter {
+	traceT := t
+	return func() tracing.Trace {
+		return &Tracer{
+			t:     traceT,
+			p:     "",
+			level: tracing.LevelError,
+		}
+	}
 }
 
 // As we are logging to global tracers there is no way of configuring them
@@ -95,6 +105,8 @@ func GetAdapter() tracing.Adapter {
 // tests may be executed concurrently or in parallel. This would confuse the
 // tracing.
 // Users have to be aware that the testingtracer may not be used concurrently.
+//
+// Deprecated: Will be removed, not needed any more.
 var globalTestingT *testing.T
 
 // RedirectTracing will be called by clients at the start of a test. This will
@@ -109,11 +121,13 @@ var globalTestingT *testing.T
 //          ...
 //      }
 //
+// Deprecated: Will be removed, not needed any more.
 func RedirectTracing(t *testing.T) func() {
 	globalTestingT = t
 	return teardownTestingT
 }
 
+// Deprecated: Will be removed, not needed any more.
 func teardownTestingT() {
 	globalTestingT = nil
 }
@@ -125,9 +139,13 @@ func (tr *Tracer) P(key string, val interface{}) tracing.Trace {
 }
 
 func (tr *Tracer) output(l tracing.TraceLevel, s string, args ...interface{}) {
-	if globalTestingT != nil {
+	if tr.t != nil {
 		prefix := fmt.Sprintf("%s%s", logLevelPrefix[int(l)], tr.p)
-		globalTestingT.Logf(prefix+s, args...)
+		tr.t.Logf(prefix+s, args...)
+		tr.p = ""
+	} else if globalTestingT != nil {
+		prefix := fmt.Sprintf("%s%s", logLevelPrefix[int(l)], tr.p)
+		globalTestingT.Logf("depr."+prefix+s, args...)
 		tr.p = ""
 	}
 }
@@ -169,3 +187,35 @@ func (tr *Tracer) GetTraceLevel() tracing.TraceLevel {
 
 // SetOutput is part of interface Trace. This implementation ignores it.
 func (tr *Tracer) SetOutput(writer io.Writer) {}
+
+// ----------------------------------------------------------------------
+
+// QuickConfig sets up a configuration suitable for test cases, including tracing.
+// It returns a teardown function which should be called at the end of a test.
+// The usual pattern will look like this:
+//
+//     func TestSomething(t *testing.T) {
+//          teardown := testconfig.QuickConfig(t, "first.trace.name", "second.trace.name")
+//          defer teardown()
+//          …
+//      }
+//
+// Tracing output will be redirected to the testing.T log (`t.Logf(…)`).
+// All tracers identified by "first.trace.name" etc. will be created and have their log
+// levels set to `Debug`. The root tracer will be set to `Debug`, too.
+//
+func QuickConfig(t *testing.T, selectors ...string) func() {
+	tracing.RegisterTraceAdapter("test", GetAdapter(t), true)
+	c := testconfig.Conf{
+		"tracing.adapter": "test",
+		"tracelevel.root": "Debug",
+	}
+	for _, sel := range selectors {
+		c["tracelevel."+sel] = "Debug"
+	}
+	if err := trace2go.ConfigureRoot(c, "tracelevel", trace2go.ReplaceTracers(true)); err != nil {
+		t.Fatal(err)
+	}
+	tracing.SetTraceSelector(trace2go.Selector())
+	return trace2go.Teardown
+}

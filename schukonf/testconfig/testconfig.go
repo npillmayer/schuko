@@ -23,12 +23,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"testing"
 
 	"github.com/npillmayer/schuko"
-	"github.com/npillmayer/schuko/schukonf/testadapter"
-	"github.com/npillmayer/schuko/tracing"
-	"github.com/npillmayer/schuko/tracing/gotestingadapter"
 )
 
 // Conf represents a lightweight configuration suited for testing.
@@ -58,7 +54,11 @@ func (c Conf) IsSet(key string) bool {
 
 // GetString is part of the interface Configuration
 func (c Conf) GetString(key string) string {
-	return fmt.Sprintf("%v", c[key])
+	v, found := c[key]
+	if !found {
+		return ""
+	}
+	return fmt.Sprintf("%v", v)
 }
 
 // GetInt is part of the interface Configuration
@@ -103,27 +103,3 @@ func (c Conf) GetBool(key string) bool {
 func (c Conf) IsInteractive() bool { return false }
 
 var _ schuko.Configuration = &Conf{}
-
-// QuickConfig sets up a configuration suitable for test cases, including tracing.
-// It returns a teardown function which should be called at the end of a test.
-// The usual pattern will look like this:
-//
-//     func TestSomething(t *testing.T) {
-//          teardown := testconfig.QuickConfig(t, map[string]string {
-//              "my-key": "my override value just for testing",
-//          })
-//          defer teardown()
-//          …
-//      }
-//
-func QuickConfig(t *testing.T, maps ...map[string]string) func() {
-	tracing.RegisterTraceAdapter("test", gotestingadapter.GetAdapter(), true)
-	c := testadapter.New()
-	c.Set("tracing", "test")
-	for _, m := range maps {
-		for k, v := range m {
-			c.Set(k, v)
-		}
-	}
-	return gotestingadapter.RedirectTracing(t)
-}
