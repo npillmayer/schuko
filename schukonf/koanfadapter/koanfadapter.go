@@ -17,6 +17,14 @@ folder of this module.
 
 Copyright © 2017–2021 Norbert Pillmayer <norbert@pillmayer.com>
 
+Parser
+
+NestedTextParser is a thin wrapper on top of npillmayer/nestext to enable using
+NestedText (see https://nestedtext.org) as a configuration format.
+Koanf needs parsers to implement the koanf.Parser interface.
+
+The parser is also available at `knadh/koanf.parsers.nestedtext`.
+
 */
 package koanfadapter
 
@@ -109,7 +117,7 @@ func (c *KConf) InitFromDefaultFile() {
 			panic(fmt.Sprintf("do not know how to decode %q-files (%q)", ext, path))
 		case ".nt":
 			//TODO remove dependency to go log
-			if err := c.k.Load(file.Provider(path), NestedTextParser{}); err != nil {
+			if err := c.k.Load(file.Provider(path), Parser()); err != nil {
 				log.Fatalf("error loading NestedText format: %v", err)
 			}
 		default:

@@ -2,30 +2,44 @@ package koanfadapter
 
 import (
 	"bytes"
+	"errors"
 
 	"github.com/npillmayer/nestext"
 	"github.com/npillmayer/nestext/ntenc"
 )
 
-// NestedTextParser is a thin wrapper on top of npillmayer/nestext to enable using
-// NestedText (see https://nestedtext.org) as a configuration format.
-// Koanf needs parsers to implement the koanf.Parser interface.
-type NestedTextParser struct{}
+// NT implements a NestedText parser.
+type NT struct{}
 
-// Unmarshal is part of the koanf.Parser interface.
-func (nt NestedTextParser) Unmarshal(data []byte) (map[string]interface{}, error) {
-	r := bytes.NewReader(data)
+// Parser returns a NestedText Parser.
+func Parser() *NT {
+	return &NT{}
+}
+
+// Unmarshal parses the given NestedText bytes.
+//
+// If the NT content does not reflect a dict (NT allows for top-level lists or strings as well),
+// the content will be wrapped into a dict with a single key named "nestedtext".
+func (p *NT) Unmarshal(b []byte) (map[string]interface{}, error) {
+	r := bytes.NewReader(b)
 	result, err := nestext.Parse(r, nestext.TopLevel("dict"))
 	if err != nil {
 		return nil, err
 	}
-	return result.(map[string]interface{}), nil
+	// Given option-parameter TopLevel, nestext.Parse is guaranteed to wrap the return value
+	// in an appropriate type (dict = map[string]interface{} in this case), if necessary.
+	// However, guard against type conversion failure anyway.
+	rmap, ok := result.(map[string]interface{})
+	if !ok {
+		return nil, errors.New("NestedText configuration expected to be a dict at top-level")
+	}
+	return rmap, nil
 }
 
-// Marshal is part of the koanf.Parser interface.
-func (nt NestedTextParser) Marshal(m map[string]interface{}) ([]byte, error) {
-	buf := &bytes.Buffer{}
-	_, err := ntenc.Encode(m, buf)
+// Marshal marshals the given config map to NestedText bytes.
+func (p *NT) Marshal(m map[string]interface{}) ([]byte, error) {
+	var buf bytes.Buffer
+	_, err := ntenc.Encode(m, &buf)
 	if err != nil {
 		return nil, err
 	}
