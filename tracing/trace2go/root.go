@@ -272,7 +272,6 @@ func setTracer(name string, trace tracing.Trace) tracing.Trace {
 func Teardown() {
 	mx.Lock()
 	defer mx.Unlock()
-	fmt.Printf("Tearing down trace2go tracing\n")
 	childMx.Lock()
 	defer childMx.Unlock()
 	selectableTracers = make(map[string]tracing.Trace)

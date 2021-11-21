@@ -1,7 +1,7 @@
 /*
 Package schuko defines types for application configuration and tracing.
 Application configuration is addressed by quite a lot of go libraries out there.
-We do not intend to re-invent the wheel, but rather need a layer on top of existing
+We do not intend to re-invent the wheel, but rather place a layer on top of existing
 libraries.  In particular, we'll integrate logging/tracing-configuration, making it
 easy to re-configure between development and production use.
 
@@ -11,7 +11,7 @@ relay this decision to the client.
 
 Attention
 
-As this package nears V1, some re-structuring happened. Please look out for
+As this package nears V1, some re-structuring happenes. Please look out for
 `deprecated` tags.
 
 License
