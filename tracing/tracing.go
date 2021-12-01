@@ -315,10 +315,10 @@ func NoOpTrace() Trace {
 
 type noOpTrace struct{}
 
-func (nt noOpTrace) Debugf(string, ...interface{}) {}
-func (nt noOpTrace) Infof(string, ...interface{})  {}
-func (nt noOpTrace) Errorf(string, ...interface{}) {}
-func (nt noOpTrace) SetTraceLevel(TraceLevel)      {}
-func (nt noOpTrace) GetTraceLevel() TraceLevel     { return LevelError }
-func (nt noOpTrace) SetOutput(io.Writer)           {}
-func (nt noOpTrace) P(string, interface{}) Trace   { return nt }
+func (nt noOpTrace) Debugf(string, ...interface{})       {}
+func (nt noOpTrace) Infof(s string, args ...interface{}) {}
+func (nt noOpTrace) Errorf(string, ...interface{})       {}
+func (nt noOpTrace) SetTraceLevel(TraceLevel)            {}
+func (nt noOpTrace) GetTraceLevel() TraceLevel           { return LevelError }
+func (nt noOpTrace) SetOutput(io.Writer)                 {}
+func (nt noOpTrace) P(string, interface{}) Trace         { return nt }

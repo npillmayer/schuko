@@ -48,6 +48,30 @@ func TestSelectorInstallation(t *testing.T) {
 	}
 }
 
+func TestRootSetOutput(t *testing.T) {
+	tracing.RegisterTraceAdapter("test", getTT, true)
+	tracing.SetTraceSelector(trace2go.Selector()) // install trace2go as global selector
+	conf := testconfig.Conf{                      // lightweight configuration
+		"tracing.adapter": "test", // test.adapter will adapt to testTracer below
+		"LEVEL.root":      "Info", // test tracer should have level info
+	}
+	trace2go.ConfigureRoot(conf, "LEVEL") // root will spawn 'testTracer' children
+	buf := &bytes.Buffer{}                // log destination
+	trace2go.Root().SetOutput(buf)
+	if trace2go.Root() != tracing.Select("root") {
+		t.Logf("root       = %T", trace2go.Root())
+		t.Logf("root/root  = %T", tracing.Select("root"))
+		t.Error("expectd tracing.Select(\"root\") to get trace2go.Root(), but doesn't")
+	}
+	msg := "TEST"
+	tracing.Infof(msg)
+	traceout := buf.String() // collect the output
+	if traceout != msg {
+		t.Logf("trace: %q", traceout)
+		t.Errorf("expected root-tracer to log infos; didn't")
+	}
+}
+
 func TestSelection(t *testing.T) {
 	tracing.RegisterTraceAdapter("test", getTT, true)
 	tracing.SetTraceSelector(trace2go.Selector()) // install trace2go as global selector

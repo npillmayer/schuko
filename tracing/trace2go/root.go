@@ -185,6 +185,9 @@ func Selector() tracing.TraceSelector {
 }
 
 func trace2goSelector(name string) tracing.Trace {
+	if name == "root" {
+		return Root()
+	}
 	return GetOrCreateTracer(name)
 }
 
