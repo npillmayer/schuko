@@ -37,10 +37,7 @@ Copyright © 2017–2021 Norbert Pillmayer <norbert@pillmayer.com>
 package tracing
 
 import (
-	"errors"
 	"io"
-	"io/fs"
-	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -206,43 +203,6 @@ func GetAdapterFromConfiguration(conf schuko.Configuration, optKey string) Adapt
 		adapter = knownTraceAdapters["bare"]
 	}
 	return adapter
-}
-
-// Destination opens a tracing destination as an io.Writer. dest may be one of
-//
-// a) literals "Stdout" or "Stderr"
-//
-// b) a file URI ("file: //my.log")
-//
-// More to come.
-//
-func Destination(dest string) (io.WriteCloser, error) {
-	switch strings.ToLower(dest) {
-	case "stdout":
-		return os.Stdout, nil
-	case "stderr":
-		return os.Stderr, nil
-	}
-	u, err := url.Parse(dest)
-	if err != nil {
-		return os.Stderr, err
-	}
-	if strings.ToLower(u.Scheme) == "file" {
-		fname := u.Path
-		if fname == "" {
-			fname = u.Host
-		}
-		f, err := os.OpenFile(fname, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
-		if err == nil {
-			return f, nil
-		}
-		if errors.Is(err, fs.ErrNotExist) {
-			return os.Create(fname)
-		} else {
-			return nil, err
-		}
-	}
-	return os.Stderr, err
 }
 
 // --- Dumping values to trace -----------------------------------------------

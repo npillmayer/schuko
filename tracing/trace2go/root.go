@@ -8,6 +8,7 @@ import (
 
 	"github.com/npillmayer/schuko"
 	"github.com/npillmayer/schuko/tracing"
+	"github.com/npillmayer/schuko/tracing/appender"
 )
 
 // TODO override root.SetOutput to redirect all children ?
@@ -176,6 +177,9 @@ func (t *rootTracer) init() {
 	if l := getValue(t.config, t.prefixKey, "root"); l != "" {
 		t.SetTraceLevel(tracing.TraceLevelFromString(l))
 	}
+	if w, err := appender.AppenderFromConfig(t.config); err == nil {
+		t.SetOutput(w)
+	}
 }
 
 // --- Integrate as tracing.Selector -----------------------------------------
@@ -219,6 +223,8 @@ func GetTracer(name string) tracing.Trace {
 // a new tracer is created and associated with `name`.
 func GetOrCreateTracer(name string) tracing.Trace {
 	t := GetTracer(name)
+	// there is a possible race condition between call to get and new, but
+	// multiple calls to new will result in the exact same tracer to be created
 	if t == nil {
 		t, _ = NewTracer(name, false)
 	}
@@ -227,6 +233,9 @@ func GetOrCreateTracer(name string) tracing.Trace {
 
 // NewTracer associates a new tracer with a name. Returns the tracer
 // occupying the slot, if any.
+//
+// The tracer will be configured using the schuko.Configuration held by the
+// root tracer. This may set a trace level and/or an output destination.
 //
 // If parameter `replace` is true, a new tracer will replace an existing one
 // for this name.
@@ -237,6 +246,9 @@ func NewTracer(name string, replace bool) (tracing.Trace, tracing.Trace) {
 		trace = r.adapter()
 		level := getValue(r.config, r.prefixKey, name)
 		trace.SetTraceLevel(tracing.TraceLevelFromString(level))
+		if w, err := appender.AppenderFromConfig(r.config); err == nil {
+			trace.SetOutput(w)
+		}
 	} else {
 		return Root(), nil
 	}
