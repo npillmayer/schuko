@@ -134,7 +134,18 @@ func teardownTestingT() {
 
 // P is part of interface Trace
 func (tr *Tracer) P(key string, val interface{}) tracing.Trace {
-	tr.p = fmt.Sprintf("[%s=%v] ", key, val)
+	var p string
+	switch v := val.(type) {
+	case rune:
+		p = fmt.Sprintf("[%s=%#U] ", key, v)
+	case int, int8, int16, int64, uint16, uint32, uint64:
+		p = fmt.Sprintf("[%s=%d] ", key, v)
+	case string:
+		p = fmt.Sprintf("[%s=%s] ", key, v)
+	default:
+		p = fmt.Sprintf("[%s=%v] ", key, v)
+	}
+	tr.p = p
 	return tr
 }
 

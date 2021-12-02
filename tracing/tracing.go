@@ -136,7 +136,7 @@ var selectorMutex = &sync.RWMutex{} // guard selector
 type selectnoOpTracer struct{}
 
 func (snop selectnoOpTracer) Select(string) Trace {
-	return noOpTrace{}
+	return globalNoOpTrace
 }
 
 // Select returns a Trace instance for a given key.
@@ -145,6 +145,9 @@ func (snop selectnoOpTracer) Select(string) Trace {
 //
 // The use of a global TraceSelector is not mandatory.
 func Select(key string) Trace {
+	if selector == nil {
+		return globalNoOpTrace
+	}
 	selectorMutex.RLock()
 	defer selectorMutex.RUnlock()
 	if selector != nil {
@@ -270,8 +273,10 @@ func P(k string, v interface{}) Trace {
 // Clients will have to use `SetTraceSelector` to change this.
 // This tracer will just do nothing.
 func NoOpTrace() Trace {
-	return noOpTrace{}
+	return globalNoOpTrace
 }
+
+var globalNoOpTrace = noOpTrace{}
 
 type noOpTrace struct{}
 

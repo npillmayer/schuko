@@ -138,7 +138,17 @@ func (l *logentry) Errorf(s string, args ...interface{}) {
 }
 
 func (l *logentry) P(key string, val interface{}) tracing.Trace {
-	p := fmt.Sprintf("[%s=%v] ", key, val)
+	var p string
+	switch v := val.(type) {
+	case rune:
+		p = fmt.Sprintf("[%s=%#U] ", key, v)
+	case int, int8, int16, int64, uint16, uint32, uint64:
+		p = fmt.Sprintf("[%s=%d] ", key, v)
+	case string:
+		p = fmt.Sprintf("[%s=%s] ", key, v)
+	default:
+		p = fmt.Sprintf("[%s=%v] ", key, v)
+	}
 	l.p = l.p + p
 	return l
 }
