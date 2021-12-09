@@ -156,8 +156,23 @@ func Select(key string) Trace {
 	return selectnoOpTracer{}.Select(key)
 }
 
+type genericSelector struct {
+	tracer Trace
+}
+
+func (sel genericSelector) Select(string) Trace {
+	return Trace(sel.tracer)
+}
+
 // Adapter is a factory function to create a Trace instance.
 type Adapter func() Trace
+
+// SelectorForAdapter return a TraceSelector which will always return a Trace produced
+// by `adapter`.
+func SelectorForAdapter(adapter Adapter) TraceSelector {
+	tracer := adapter()
+	return genericSelector{tracer: tracer}
+}
 
 var knownTraceAdapters = map[string]Adapter{
 	"nop": func() Trace {
@@ -191,7 +206,7 @@ func RegisterTraceAdapter(key string, adapter Adapter, replace bool) {
 //
 // The value must be one of the known tracing adapter keys (see RegisterTraceAdapter).
 // If the key is not registered, Adapter
-// defaults to a minimalistic (bare bones) tracer.
+// defaults to a no-op tracer.
 //
 func GetAdapterFromConfiguration(conf schuko.Configuration, optKey string) Adapter {
 	adapterPackage := conf.GetString("tracing.adapter")
@@ -202,8 +217,8 @@ func GetAdapterFromConfiguration(conf schuko.Configuration, optKey string) Adapt
 	defer adapterMutex.RUnlock()
 	adapter, ok := knownTraceAdapters[adapterPackage]
 	if !ok || adapter == nil {
-		Debugf("no adapter found for tracing type %q\n", adapterPackage)
-		adapter = knownTraceAdapters["bare"]
+		Infof("no adapter found for tracing type %q\n", adapterPackage)
+		adapter = knownTraceAdapters["nop"]
 	}
 	return adapter
 }
