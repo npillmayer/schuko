@@ -57,7 +57,7 @@ func TestLocateConfig(t *testing.T) {
 		}
 	}
 	fileNames = LocateConfig(appTag, "your*.*", suffixes)
-	if len(fileNames) == 0 {
+	if len(fileNames) > 0 {
 		t.Errorf("expected no pattern file to be found")
 	}
 }

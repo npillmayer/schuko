@@ -4,7 +4,7 @@ Package koanfadapter is for application configuration with knadh/koanf.
 All configuration is started explicitely with a call to
 
 	conf := koanfadapter.New(…)
-	conf.InitDefaults(conf)
+	conf.InitDefaults()
 
 There is no init() call to set up configuration a priori. The reason
 is to avoid coupling to a specific configuration framework, but rather
@@ -15,7 +15,7 @@ relay this decision to the client.
 Governed by a 3-Clause BSD license. License file may be found in the root
 folder of this module.
 
-Copyright © 2017–2021 Norbert Pillmayer <norbert@pillmayer.com>
+Copyright © Norbert Pillmayer <norbert@pillmayer.com>
 
 # Parser
 
@@ -66,11 +66,6 @@ func New(k *koanf.Koanf, appTag string, suffixes []string) *KConf {
 func (c *KConf) Koanf() *koanf.Koanf {
 	return c.k
 }
-
-// Init is usually called by schuko.Initialize()
-// func (c *KConf) Init() {
-//     c.InitDefaults()
-// }
 
 // InitDefaults loads initial configuration settings. For koanf, it does two things:
 //

@@ -5,26 +5,24 @@ Objects of this package may be used by clients directly, but most of the time
 they will be instantiated transparently by calls to `testconfig.QuickConfig`.
 Clients will usually follow a pattern along the line of:
 
-    import "github.com/npillmayer/schuko/testconfig"
+	import "github.com/npillmayer/schuko/testconfig"
 
-    func TestSomething(t *testing.T) {
-         teardown := testconfig.QuickConfig(t)
-         defer teardown()
-         …
-     }
+	func TestSomething(t *testing.T) {
+	     teardown := testconfig.QuickConfig(t)
+	     defer teardown()
+	     …
+	 }
 
 There is no init() call to set up configuration a priori. The reason
 is to avoid coupling to a specific configuration framework, but rather
 relay this decision to the client.
 
-
-License
+# License
 
 Governed by a 3-Clause BSD license. License file may be found in the root
 folder of this module.
 
-Copyright © 2017–2021 Norbert Pillmayer <norbert@pillmayer.com>
-
+Copyright © Norbert Pillmayer <norbert@pillmayer.com>
 */
 package testadapter
 
@@ -39,7 +37,6 @@ import (
 // Conf represents a lightweight configuration suited for testing.
 //
 // Deprecated: Use testconfig Conf instead.
-//
 type Conf struct {
 	values map[string]string
 }
@@ -47,7 +44,6 @@ type Conf struct {
 // New creates a new configuration suited for testing.
 //
 // Deprecated: Use testconfig Conf instead.
-//
 func New() *Conf {
 	return &Conf{values: make(map[string]string)}
 }
