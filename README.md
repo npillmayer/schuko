@@ -1,6 +1,6 @@
 ## Warning
 
-Under **heavy re-construction**, heading to V2.
+Under **heavy re-construction**.  Use Version v0.1.0 tag for stable releases.
 
 # Schuko – Adapters for Configuration and Logging in Go 
 
