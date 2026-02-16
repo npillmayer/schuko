@@ -14,17 +14,16 @@ specifically from single tests. That's not a good thing, as in general
 tests may be executed concurrently/in parallel. This would confuse the
 tracing.
 
-Attention
+# Attention
 
 Clients must not use the testingtracer in concurrent mode.
 Please set
 
 	go test -p 1
 
+# BSD License
 
-BSD License
-
-Copyright (c) 2017–20, Norbert Pillmayer
+# Copyright (c) 2017–20, Norbert Pillmayer
 
 All rights reserved.
 
@@ -53,7 +52,8 @@ LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
 DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
 THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
 package gotestingadapter
 
 import (
@@ -115,11 +115,11 @@ var globalTestingT *testing.T
 // It returns a teardown function which should be called at the end of a test.
 // The usual pattern will look like this:
 //
-//     func TestSomething(t *testing.T) {
-//          teardown := gotestingadapter.RedirectTracing(t)
-//          defer teardown()
-//          ...
-//      }
+//	func TestSomething(t *testing.T) {
+//	     teardown := gotestingadapter.RedirectTracing(t)
+//	     defer teardown()
+//	     ...
+//	 }
 //
 // Deprecated: Will be removed, not needed any more.
 func RedirectTracing(t *testing.T) func() {
@@ -133,7 +133,7 @@ func teardownTestingT() {
 }
 
 // P is part of interface Trace
-func (tr *Tracer) P(key string, val interface{}) tracing.Trace {
+func (tr *Tracer) P(key string, val any) tracing.Trace {
 	var p string
 	switch v := val.(type) {
 	case rune:
@@ -149,7 +149,7 @@ func (tr *Tracer) P(key string, val interface{}) tracing.Trace {
 	return tr
 }
 
-func (tr *Tracer) output(l tracing.TraceLevel, s string, args ...interface{}) {
+func (tr *Tracer) output(l tracing.TraceLevel, s string, args ...any) {
 	if tr.t != nil {
 		prefix := fmt.Sprintf("%s%s", logLevelPrefix[int(l)], tr.p)
 		tr.t.Logf(prefix+s, args...)
@@ -162,7 +162,7 @@ func (tr *Tracer) output(l tracing.TraceLevel, s string, args ...interface{}) {
 }
 
 // Debugf is part of interface Trace
-func (tr *Tracer) Debugf(s string, args ...interface{}) {
+func (tr *Tracer) Debugf(s string, args ...any) {
 	if tr.level < tracing.LevelDebug {
 		return
 	}
@@ -170,7 +170,7 @@ func (tr *Tracer) Debugf(s string, args ...interface{}) {
 }
 
 // Infof is part of interface Trace
-func (tr *Tracer) Infof(s string, args ...interface{}) {
+func (tr *Tracer) Infof(s string, args ...any) {
 	if tr.level < tracing.LevelInfo {
 		return
 	}
@@ -178,7 +178,7 @@ func (tr *Tracer) Infof(s string, args ...interface{}) {
 }
 
 // Errorf is part of interface Trace
-func (tr *Tracer) Errorf(s string, args ...interface{}) {
+func (tr *Tracer) Errorf(s string, args ...any) {
 	if tr.level < tracing.LevelError {
 		return
 	}
@@ -205,16 +205,15 @@ func (tr *Tracer) SetOutput(writer io.Writer) {}
 // It returns a teardown function which should be called at the end of a test.
 // The usual pattern will look like this:
 //
-//     func TestSomething(t *testing.T) {
-//          teardown := testconfig.QuickConfig(t, "first.trace.name", "second.trace.name")
-//          defer teardown()
-//          …
-//      }
+//	func TestSomething(t *testing.T) {
+//	     teardown := testconfig.QuickConfig(t, "first.trace.name", "second.trace.name")
+//	     defer teardown()
+//	     …
+//	 }
 //
 // Tracing output will be redirected to the testing.T log (`t.Logf(…)`).
 // All tracers identified by "first.trace.name" etc. will be created and have their log
 // levels set to `Debug`. The root tracer will be set to `Debug`, too.
-//
 func QuickConfig(t *testing.T, selectors ...string) func() {
 	tracing.RegisterTraceAdapter("test", GetAdapter(t), true)
 	c := testconfig.Conf{

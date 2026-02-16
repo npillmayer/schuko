@@ -3,19 +3,18 @@ Package testconfig provides configuration and tracing suitable for tests.
 
 The usual usage-pattern will look like this:
 
-    func TestSomething(t *testing.T) {
-        teardown := testconfig.QuickConfig(t)
-        defer teardown()
-        …
-     }
+	func TestSomething(t *testing.T) {
+	    teardown := testconfig.QuickConfig(t)
+	    defer teardown()
+	    …
+	 }
 
-License
+# License
 
 Governed by a 3-Clause BSD license. License file may be found in the root
 folder of this module.
 
 Copyright © 2017–2021 Norbert Pillmayer <norbert@pillmayer.com>
-
 */
 package testconfig
 
@@ -28,7 +27,7 @@ import (
 )
 
 // Conf represents a lightweight configuration suited for testing.
-type Conf map[string]interface{}
+type Conf map[string]any
 
 // InitDefaults is called to fill the test-configuration with sensible defaults
 // for testing. It will set the default tracer to a gotestingadapter instance.

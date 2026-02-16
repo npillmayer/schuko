@@ -10,13 +10,12 @@ There is no init-call to set up configuration a priori. The reason
 is to avoid coupling to a specific configuration framework, but rather
 relay this decision to the client.
 
-License
+# License
 
 Governed by a 3-Clause BSD license. License file may be found in the root
 folder of this module.
 
 Copyright © 2017–2021 Norbert Pillmayer <norbert@pillmayer.com>
-
 */
 package viperadapter
 
@@ -66,7 +65,7 @@ func (c *VConf) InitConfigPath() {
 }
 
 // Set overrides any configuration values.
-func (c *VConf) Set(key string, value interface{}) {
+func (c *VConf) Set(key string, value any) {
 	viper.Set(key, value)
 }
 

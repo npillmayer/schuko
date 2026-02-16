@@ -8,13 +8,12 @@ classes/packages are infected with log classes/packages.
 Sub-packages of tracing implement concrete tracers. Package
 gologadapter uses the default Go logging mechanism.
 
-License
+# License
 
 Governed by a 3-Clause BSD license. License file may be found in the root
 folder of this module.
 
 Copyright © 2017–2021 Norbert Pillmayer <norbert@pillmayer.com>
-
 */
 package gologadapter
 
@@ -53,14 +52,14 @@ func GetAdapter() tracing.Adapter {
 // ----------------------------------------------------------------------------
 
 // P is part of interface Trace
-func (t *Tracer) P(key string, val interface{}) tracing.Trace {
+func (t *Tracer) P(key string, val any) tracing.Trace {
 	l := &logentry{tracer: t}
 	l.p = fmt.Sprintf("[%s=%v] ", key, val)
 	return l
 }
 
 // Debugf is part of interface Trace
-func (t *Tracer) Debugf(s string, args ...interface{}) {
+func (t *Tracer) Debugf(s string, args ...any) {
 	if t.level < tracing.LevelDebug {
 		return
 	}
@@ -68,7 +67,7 @@ func (t *Tracer) Debugf(s string, args ...interface{}) {
 }
 
 // Infof is part of interface Trace
-func (t *Tracer) Infof(s string, args ...interface{}) {
+func (t *Tracer) Infof(s string, args ...any) {
 	if t.level < tracing.LevelInfo {
 		return
 	}
@@ -76,7 +75,7 @@ func (t *Tracer) Infof(s string, args ...interface{}) {
 }
 
 // Errorf is part of interface Trace
-func (t *Tracer) Errorf(s string, args ...interface{}) {
+func (t *Tracer) Errorf(s string, args ...any) {
 	if t.level < tracing.LevelError {
 		return
 	}
@@ -99,7 +98,7 @@ func (t *Tracer) SetOutput(writer io.Writer) {
 	t.log.SetOutput(writer)
 }
 
-func (t *Tracer) output(l tracing.TraceLevel, p string, s string, args ...interface{}) {
+func (t *Tracer) output(l tracing.TraceLevel, p string, s string, args ...any) {
 	t.log.SetPrefix(logLevelPrefix[int(l)])
 	if p == "" { // if no prefix present
 		t.log.Printf(s, args...)
@@ -116,28 +115,28 @@ type logentry struct { // will have to implement tracing.Trace
 	p      string  // prefix
 }
 
-func (l *logentry) Debugf(s string, args ...interface{}) {
+func (l *logentry) Debugf(s string, args ...any) {
 	if l.tracer.level < tracing.LevelDebug {
 		return
 	}
 	l.tracer.output(tracing.LevelDebug, "", s, args...)
 }
 
-func (l *logentry) Infof(s string, args ...interface{}) {
+func (l *logentry) Infof(s string, args ...any) {
 	if l.tracer.level < tracing.LevelInfo {
 		return
 	}
 	l.tracer.output(tracing.LevelDebug, "", s, args...)
 }
 
-func (l *logentry) Errorf(s string, args ...interface{}) {
+func (l *logentry) Errorf(s string, args ...any) {
 	if l.tracer.level < tracing.LevelError {
 		return
 	}
 	l.tracer.output(tracing.LevelDebug, l.p, s, args...)
 }
 
-func (l *logentry) P(key string, val interface{}) tracing.Trace {
+func (l *logentry) P(key string, val any) tracing.Trace {
 	var p string
 	switch v := val.(type) {
 	case rune:

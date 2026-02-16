@@ -39,7 +39,7 @@ type testTracer struct {
 	out io.Writer
 }
 
-func (tt *testTracer) Errorf(msg string, args ...interface{}) {
+func (tt *testTracer) Errorf(msg string, args ...any) {
 	tt.out.Write([]byte(msg)) // for test: ignore args
 }
 

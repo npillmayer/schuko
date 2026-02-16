@@ -1,6 +1,6 @@
 ## Warning
 
-Under **heavy re-construction**, heading to V1.
+Under **heavy re-construction**, heading to V2.
 
 # Schuko – Adapters for Configuration and Logging in Go 
 
@@ -86,4 +86,4 @@ the tons of packages out there with “log” in their names.
 “Schuko” is the German name for a system of secure power-plugs in continental
 Europe, short for “Schutzkontakt”, which roughly translates to “safe contact”.
 
-<img src="http://npillmayer.github.io/img/Schuko-Stecker.svg" style="max-width:230px" width="230px">
+<img src="http://npillmayer.github.io/external/Schuko-Stecker.svg" style="max-width:230px" width="230px">

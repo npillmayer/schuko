@@ -8,17 +8,16 @@ classes/packages are infected with log classes/packages.
 Sub-packages of tracing implement concrete tracers. Package
 logrus uses "github.com/sirupsen/logrus" as the means for tracing.
 
-BSD License
+# BSD License
 
-Copyright (c) 2017–21, Norbert Pillmayer
+# Copyright (c) 2017–21, Norbert Pillmayer
 
-License
+# License
 
 Governed by a 3-Clause BSD license. License file may be found in the root
 folder of this module.
 
 Copyright © 2017–2021 Norbert Pillmayer <norbert@pillmayer.com>
-
 */
 package logrusadapter
 
@@ -48,13 +47,13 @@ func GetAdapter() tracing.Adapter {
 }
 
 // Interface tracing.Trace
-func (t *Tracer) P(key string, val interface{}) tracing.Trace {
+func (t *Tracer) P(key string, val any) tracing.Trace {
 	t.p = t.log.WithField(key, val)
 	return t
 }
 
 // Interface tracing.Trace
-func (t *Tracer) Debugf(s string, args ...interface{}) {
+func (t *Tracer) Debugf(s string, args ...any) {
 	if t.p != nil {
 		t.p.Debugf(s, args...)
 		t.p = nil
@@ -64,7 +63,7 @@ func (t *Tracer) Debugf(s string, args ...interface{}) {
 }
 
 // Interface tracing.Trace
-func (t *Tracer) Infof(s string, args ...interface{}) {
+func (t *Tracer) Infof(s string, args ...any) {
 	if t.p != nil {
 		t.p.Infof(s, args...)
 		t.p = nil
@@ -74,7 +73,7 @@ func (t *Tracer) Infof(s string, args ...interface{}) {
 }
 
 // Interface tracing.Trace
-func (t *Tracer) Errorf(s string, args ...interface{}) {
+func (t *Tracer) Errorf(s string, args ...any) {
 	if t.p != nil {
 		t.p.Errorf(s, args...)
 		t.p = nil

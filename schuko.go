@@ -9,18 +9,17 @@ There is no init-call to set up configuration a priori. The reason
 is to avoid coupling to a specific configuration framework, but rather
 relay this decision to the client.
 
-Attention
+# Attention
 
 As this package nears V1, some re-structuring happenes. Please look out for
 `deprecated` tags.
 
-License
+# License
 
 Governed by a 3-Clause BSD license. License file may be found in the root
 folder of this module.
 
-Copyright © 2017–2021 Norbert Pillmayer <norbert@pillmayer.com>
-
+Copyright © Norbert Pillmayer <norbert@pillmayer.com>
 */
 package schuko
 
@@ -40,10 +39,9 @@ type Configuration interface {
 	GetString(key string) string // get config value as string
 	GetInt(key string) int       // get config value as integer
 	GetBool(key string) bool     // get config value as boolean
-	IsInteractive() bool         // deprecated!
 }
 
-var knownTraceAdapters = map[string]interface{}{
+var knownTraceAdapters = map[string]any{
 	//"go": gologadapter.GetAdapter(),
 	//"logrus": logrusadapter.GetAdapter(), // now to be set by AddTraceAdapter()
 }
@@ -58,8 +56,7 @@ var adapterMutex = &sync.RWMutex{} // guard knownTraceAdapters[]
 // otherwise the adapter cannot be found.
 //
 // Deprecated: This moves to package tracing RegisterTraceAdapter.
-//
-func AddTraceAdapter(key string, adapter interface{}) {
+func AddTraceAdapter(key string, adapter any) {
 	adapterMutex.Lock()
 	defer adapterMutex.Unlock()
 	knownTraceAdapters[key] = adapter
@@ -72,8 +69,7 @@ func AddTraceAdapter(key string, adapter interface{}) {
 // Default is an adapter for the Go standard log package.
 //
 // Deprecated: This moves to package tracing.
-//
-func GetAdapterFromConfiguration(conf Configuration) interface{} {
+func GetAdapterFromConfiguration(conf Configuration) any {
 	adapterPackage := conf.GetString("tracing")
 	adapterMutex.RLock()
 	defer adapterMutex.RUnlock()
@@ -90,22 +86,23 @@ func GetAdapterFromConfiguration(conf Configuration) interface{} {
 // existing directories and files, and an optional pattern.
 // Files will have to match one of:
 //
-//    <pattern>.<suffix>    // if pattern is given
-//    <tag>.<suffix>        // if no pattern
-//    config.<suffix>       // if no pattern
-//    .<tag>.<suffix>       // for $HOME only and no pattern
+//	<pattern>.<suffix>    // if pattern is given
+//	<tag>.<suffix>        // if no pattern
+//	config.<suffix>       // if no pattern
+//	.<tag>.<suffix>       // for $HOME only and no pattern
 //
 // Allowed file types are given as argument `suffixes`.
 //
 // Example: An app uses the tag 'myapp'. On a *nix-system the configuration may
 // be searched for at
-//    $HOME/.config/myapp/config.*
-//    $HOME/.config/myapp/myapp.*
-//    $HOME/.myapp.*
+//
+//	$HOME/.config/myapp/config.*
+//	$HOME/.config/myapp/myapp.*
+//	$HOME/.myapp.*
 //
 // On MacOS it would be searched for in
-//    $HOME/Library/Application Support/MyApp/
 //
+//	$HOME/Library/Application Support/MyApp/
 func LocateConfig(appTag string, pattern string, suffixes []string) []string {
 	//
 	if appTag == "" || len(suffixes) == 0 {

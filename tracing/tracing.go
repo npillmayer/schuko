@@ -19,20 +19,18 @@ implementation and creates no dependencies. Deciding for a concrete logger/trace
 is completely up to the main application, where it's perfectly okay to create
 a logger/tracer-dependency.
 
-Resources
+# Resources
 
 https://dave.cheney.net/2015/11/05/lets-talk-about-logging
 
 https://dave.cheney.net/2017/01/23/the-package-level-logger-anti-pattern
 
-
-License
+# License
 
 Governed by a 3-Clause BSD license. License file may be found in the root
 folder of this module.
 
-Copyright © 2017–2021 Norbert Pillmayer <norbert@pillmayer.com>
-
+Copyright © Norbert Pillmayer <norbert@pillmayer.com>
 */
 package tracing
 
@@ -92,19 +90,19 @@ func TraceLevelFromString(sl string) TraceLevel {
 // Tracers should support parameter/field tracing given by P(...).
 // An example would be
 //
-//    tracer.P("mycontext", "value").Debugf("message within context")
+//	tracer.P("mycontext", "value").Debugf("message within context")
 //
 // Tracers should be prepared to trace to console as well as to a file.
 // By convention, no newlines at the end of tracing messages will be passed
 // by clients.
 type Trace interface {
-	Errorf(string, ...interface{}) // trace on error level
-	Infof(string, ...interface{})  // trace on level ≥ info
-	Debugf(string, ...interface{}) // trace on level ≥ debug
-	P(string, interface{}) Trace   // parameter/context tracing
-	SetTraceLevel(TraceLevel)      // change the trace level
-	GetTraceLevel() TraceLevel     // get the currently active trace level
-	SetOutput(io.Writer)           // route tracing output to a writer
+	Errorf(string, ...any)     // trace on error level
+	Infof(string, ...any)      // trace on level ≥ info
+	Debugf(string, ...any)     // trace on level ≥ debug
+	P(string, any) Trace       // parameter/context tracing
+	SetTraceLevel(TraceLevel)  // change the trace level
+	GetTraceLevel() TraceLevel // get the currently active trace level
+	SetOutput(io.Writer)       // route tracing output to a writer
 }
 
 // Tracefile is the global file where tracing goes to.
@@ -207,7 +205,6 @@ func RegisterTraceAdapter(key string, adapter Adapter, replace bool) {
 // The value must be one of the known tracing adapter keys (see RegisterTraceAdapter).
 // If the key is not registered, Adapter
 // defaults to a no-op tracer.
-//
 func GetAdapterFromConfiguration(conf schuko.Configuration, optKey string) Adapter {
 	adapterPackage := conf.GetString("tracing.adapter")
 	if adapterPackage == "" {
@@ -230,11 +227,11 @@ func GetAdapterFromConfiguration(conf schuko.Configuration, optKey string) Adapt
 //
 // Usage:
 //
-//     tracing.With(mytracer).Dump(anObject)
+//	tracing.With(mytracer).Dump(anObject)
 //
-// Dump accepts interface{};
+// Dump accepts type `any`;
 // it uses 'davecgh/go-spew'.
-// Dump(…) will not produce output with t having set a level above LevelDebug.
+// Dump(…) will not produce output with `t` having set a level above LevelDebug.
 func With(t Trace) _Dumper {
 	return _Dumper{&t}
 }
@@ -247,7 +244,7 @@ type _Dumper struct {
 // Dump dumps an object using a tracer, in level Debug.
 //
 // d may not be nil.
-func (d _Dumper) Dump(name string, obj interface{}) {
+func (d _Dumper) Dump(name string, obj any) {
 	if (*d.tracer).GetTraceLevel() >= LevelDebug {
 		str := spew.Sdump(obj)
 		(*d.tracer).Debugf(name + " = " + str)
@@ -258,26 +255,26 @@ func (d _Dumper) Dump(name string, obj interface{}) {
 
 // Debugf traces at level LevelDebug to the global default tracer.
 // This is part of a global tracing facade.
-func Debugf(msg string, args ...interface{}) {
+func Debugf(msg string, args ...any) {
 	Select("root").Debugf(msg, args...)
 }
 
 // Infof traces at level LevelInfo to the global default tracer.
 // This is part of a global tracing facade.
-func Infof(msg string, args ...interface{}) {
+func Infof(msg string, args ...any) {
 	Select("root").Infof(msg, args...)
 }
 
 // Errorf traces at level LevelError to the global default tracer.
 // This is part of a global tracing facade.
-func Errorf(msg string, args ...interface{}) {
+func Errorf(msg string, args ...any) {
 	Select("root").Errorf(msg, args...)
 }
 
 // P performs P on the global default tracer (field tracing).
 // Field tracing sets a context for a tracing message.
 // This is part of a global tracing facade.
-func P(k string, v interface{}) Trace {
+func P(k string, v any) Trace {
 	r := Select("root")
 	return r.P(k, v)
 }
@@ -295,10 +292,10 @@ var globalNoOpTrace = noOpTrace{}
 
 type noOpTrace struct{}
 
-func (nt noOpTrace) Debugf(string, ...interface{})       {}
-func (nt noOpTrace) Infof(s string, args ...interface{}) {}
-func (nt noOpTrace) Errorf(string, ...interface{})       {}
-func (nt noOpTrace) SetTraceLevel(TraceLevel)            {}
-func (nt noOpTrace) GetTraceLevel() TraceLevel           { return LevelError }
-func (nt noOpTrace) SetOutput(io.Writer)                 {}
-func (nt noOpTrace) P(string, interface{}) Trace         { return nt }
+func (nt noOpTrace) Debugf(string, ...any)       {}
+func (nt noOpTrace) Infof(s string, args ...any) {}
+func (nt noOpTrace) Errorf(string, ...any)       {}
+func (nt noOpTrace) SetTraceLevel(TraceLevel)    {}
+func (nt noOpTrace) GetTraceLevel() TraceLevel   { return LevelError }
+func (nt noOpTrace) SetOutput(io.Writer)         {}
+func (nt noOpTrace) P(string, any) Trace         { return nt }

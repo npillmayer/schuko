@@ -111,7 +111,7 @@ type testTracer struct {
 	out io.Writer
 }
 
-func (tt *testTracer) Infof(msg string, args ...interface{}) {
+func (tt *testTracer) Infof(msg string, args ...any) {
 	tt.out.Write([]byte(msg)) // for test: ignore args
 }
 

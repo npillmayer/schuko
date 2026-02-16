@@ -10,21 +10,20 @@ There is no init() call to set up configuration a priori. The reason
 is to avoid coupling to a specific configuration framework, but rather
 relay this decision to the client.
 
-License
+# License
 
 Governed by a 3-Clause BSD license. License file may be found in the root
 folder of this module.
 
 Copyright © 2017–2021 Norbert Pillmayer <norbert@pillmayer.com>
 
-Parser
+# Parser
 
 NestedTextParser is a thin wrapper on top of npillmayer/nestext to enable using
 NestedText (see https://nestedtext.org) as a configuration format.
 Koanf needs parsers to implement the koanf.Parser interface.
 
 The parser is also available at `knadh/koanf.parsers.nestedtext`.
-
 */
 package koanfadapter
 
@@ -52,7 +51,6 @@ type KConf struct {
 // If appTag and suffixes are given, configuration files are searched for at
 // system-dependent standard locations, using the appTag for indentification
 // (please refer to the description of koanfadapter.InitDefaults).
-//
 func New(k *koanf.Koanf, appTag string, suffixes []string) *KConf {
 	if k == nil {
 		k = koanf.New(".")
@@ -79,11 +77,11 @@ func (c *KConf) Koanf() *koanf.Koanf {
 // (1) It sets the default tracer to the builtin Go log
 //
 // (2) It loads application-specific configuration from
-//     “natural” configuration locations, if any are found. It does this by calling
-//     `InitFromDefaultFile()`
 //
+//	“natural” configuration locations, if any are found. It does this by calling
+//	`InitFromDefaultFile()`
 func (c *KConf) InitDefaults() {
-	c.k.Load(confmap.Provider(map[string]interface{}{
+	c.k.Load(confmap.Provider(map[string]any{
 		"tracing.adapter": "go",
 	}, c.k.Delim()), nil)
 	if c.tag != "" {
@@ -100,7 +98,6 @@ func (c *KConf) InitDefaults() {
 // InitFromDefaultFile is usually not called directly by clients, but
 // rather by InitDefaults. It is made public to enable clients to override
 // it.
-//
 func (c *KConf) InitFromDefaultFile() {
 	files := schuko.LocateConfig(c.tag, "", c.suffixes)
 	if len(files) == 0 {
@@ -127,8 +124,8 @@ func (c *KConf) InitFromDefaultFile() {
 }
 
 // Set overrides any configuration values set from the environment.
-func (c *KConf) Set(key string, value interface{}) {
-	c.k.Load(confmap.Provider(map[string]interface{}{
+func (c *KConf) Set(key string, value any) {
+	c.k.Load(confmap.Provider(map[string]any{
 		key: value,
 	}, c.k.Delim()), nil)
 }

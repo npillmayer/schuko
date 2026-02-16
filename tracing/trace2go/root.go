@@ -40,7 +40,6 @@ var root tracing.Trace
 // c) no field tracing is available
 //
 // Later calls to ConfigureRoot can substitute the root tracer.
-//
 func Root() tracing.Trace {
 	mx.RLock()
 	defer mx.RUnlock()
@@ -104,10 +103,9 @@ type _RootOption func(*rootTracer) error
 //
 // Use it like this:
 //
-//    err := ConfigureRoot(myconf, "", ReplaceTracers(true))
+//	err := ConfigureRoot(myconf, "", ReplaceTracers(true))
 //
 // New tracers replacing existing ones will inherit their trace level.
-//
 func ReplaceTracers(replace bool) RootOption {
 	return func(r *rootTracer) error {
 		r.replaceChildren = replace
@@ -121,14 +119,13 @@ func ReplaceTracers(replace bool) RootOption {
 //
 // Use it like this:
 //
-//    err := ConfigureRoot(myconf, "", AdapterKey("look.for.this.adapter"))
+//	err := ConfigureRoot(myconf, "", AdapterKey("look.for.this.adapter"))
 //
 // with a configuration setting of:
 //
-//    look.for.this.adapter: logrus
+//	look.for.this.adapter: logrus
 //
 // Please see also tracing.GetAdapterFromConfiguration
-//
 func AdapterKey(key string) RootOption {
 	return func(r *rootTracer) error {
 		r.optAdapterKey = key
@@ -152,11 +149,10 @@ type rootTracer struct {
 // search for configuration values. For example, having these config keys
 // loaded:
 //
-//    trace.root:            Info
-//    trace.myapp.mymodule:  Debug
+//	trace.root:            Info
+//	trace.myapp.mymodule:  Debug
 //
 // prefixKey should be set to "trace".
-//
 func newRootTracer(conf schuko.Configuration, prefixKey string) *rootTracer {
 	t := &rootTracer{
 		config:    conf,
@@ -239,7 +235,6 @@ func GetOrCreateTracer(name string) tracing.Trace {
 //
 // If parameter `replace` is true, a new tracer will replace an existing one
 // for this name.
-//
 func NewTracer(name string, replace bool) (tracing.Trace, tracing.Trace) {
 	var trace tracing.Trace
 	if r, ok := Root().(*rootTracer); ok {
@@ -271,7 +266,6 @@ func NewTracer(name string, replace bool) (tracing.Trace, tracing.Trace) {
 // New tracers replacing existing ones will inherit their trace level.
 //
 // Not protected by childMx.
-//
 func setTracer(name string, trace tracing.Trace) tracing.Trace {
 	prev, ok := selectableTracers[name]
 	selectableTracers[name] = trace
@@ -299,7 +293,6 @@ func Teardown() {
 // _BareBonesTrace is a minimalistic Trace implementation. Its use is mainly
 // for stepping in in case no tracer is intialized yet.
 // This may be especially the case during application-initialization.
-//
 type _BareBonesTrace struct {
 	out io.Writer
 }
@@ -313,14 +306,14 @@ func (bbt *_BareBonesTrace) Tracer(name string) tracing.Trace {
 }
 
 // Debugf does nothing
-func (bbt _BareBonesTrace) Debugf(string, ...interface{}) {}
+func (bbt _BareBonesTrace) Debugf(string, ...any) {}
 
 // Infof does nothing
-func (bbt _BareBonesTrace) Infof(string, ...interface{}) {}
+func (bbt _BareBonesTrace) Infof(string, ...any) {}
 
 // Errorf traces errors. It is the only trace level implemented for
 // bare bones tracers.
-func (bbt _BareBonesTrace) Errorf(msg string, args ...interface{}) {
+func (bbt _BareBonesTrace) Errorf(msg string, args ...any) {
 	if bbt.out == nil {
 		fmt.Fprintf(os.Stderr, "[ERROR] "+msg+"\n", args...)
 		return
@@ -329,7 +322,7 @@ func (bbt _BareBonesTrace) Errorf(msg string, args ...interface{}) {
 }
 
 // P does nothing
-func (bbt *_BareBonesTrace) P(string, interface{}) tracing.Trace { return bbt }
+func (bbt *_BareBonesTrace) P(string, any) tracing.Trace { return bbt }
 
 // SetTraceLevel does nothing (trace level is always LevelError)
 func (bbt _BareBonesTrace) SetTraceLevel(tracing.TraceLevel) {}
