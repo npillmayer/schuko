@@ -16,10 +16,10 @@ tracing.
 
 # Attention
 
-Clients must not use the testingtracer in concurrent mode.
-Please set
-
-	go test -p 1
+Tracer instances support concurrent logging and level changes. P returns an
+independent contextual tracer. Global configuration (QuickConfig and teardown)
+must remain serialized between tests; parallel tests should use New directly.
+All logging goroutines must finish before their testing.T completes.
 
 # BSD License
 
@@ -32,6 +32,7 @@ package gotestingadapter
 import (
 	"fmt"
 	"io"
+	"sync"
 	"testing"
 
 	"github.com/npillmayer/schuko/schukonf/testconfig"
@@ -42,6 +43,7 @@ import (
 // Tracer is our adapter implementation which implements interface
 // tracing.Trace, using a Go testing logger.
 type Tracer struct {
+	mu    sync.Mutex
 	t     *testing.T
 	p     string
 	level tracing.TraceLevel
@@ -81,6 +83,7 @@ func GetAdapter(t *testing.T) tracing.Adapter {
 //
 // Deprecated: Will be removed, not needed any more.
 var globalTestingT *testing.T
+var globalTestingMu sync.RWMutex
 
 // RedirectTracing will be called by clients at the start of a test. This will
 // redirect all (global) tracers to use t.logf(...).
@@ -96,16 +99,21 @@ var globalTestingT *testing.T
 //
 // Deprecated: Will be removed, not needed any more.
 func RedirectTracing(t *testing.T) func() {
+	globalTestingMu.Lock()
 	globalTestingT = t
+	globalTestingMu.Unlock()
 	return teardownTestingT
 }
 
 // Deprecated: Will be removed, not needed any more.
 func teardownTestingT() {
+	globalTestingMu.Lock()
 	globalTestingT = nil
+	globalTestingMu.Unlock()
 }
 
-// P is part of interface Trace
+// P returns an independent contextual tracer with a snapshot of the current level.
+// The receiver is unchanged, so concurrent callers cannot exchange contexts.
 func (tr *Tracer) P(key string, val any) tracing.Trace {
 	var p string
 	switch v := val.(type) {
@@ -118,54 +126,60 @@ func (tr *Tracer) P(key string, val any) tracing.Trace {
 	default:
 		p = fmt.Sprintf("[%s=%v] ", key, v)
 	}
-	tr.p = p
-	return tr
+	tr.mu.Lock()
+	defer tr.mu.Unlock()
+	return &Tracer{t: tr.t, p: p, level: tr.level}
 }
 
 func (tr *Tracer) output(l tracing.TraceLevel, s string, args ...any) {
-	if tr.t != nil {
-		prefix := fmt.Sprintf("%s%s", logLevelPrefix[int(l)], tr.p)
-		tr.t.Logf(prefix+s, args...)
-		tr.p = ""
-	} else if globalTestingT != nil {
-		prefix := fmt.Sprintf("%s%s", logLevelPrefix[int(l)], tr.p)
-		globalTestingT.Logf("depr."+prefix+s, args...)
-		tr.p = ""
+	tr.mu.Lock()
+	if tr.level < l {
+		tr.mu.Unlock()
+		return
+	}
+	target, context := tr.t, tr.p
+	tr.p = ""
+	tr.mu.Unlock()
+	// Do not hold the state lock while formatting user arguments or logging.
+	prefix := logLevelPrefix[int(l)] + context
+	if target == nil {
+		globalTestingMu.RLock()
+		target = globalTestingT
+		globalTestingMu.RUnlock()
+		prefix = "depr." + prefix
+	}
+	if target != nil {
+		target.Logf(prefix+s, args...)
 	}
 }
 
 // Debugf is part of interface Trace
 func (tr *Tracer) Debugf(s string, args ...any) {
-	if tr.level < tracing.LevelDebug {
-		return
-	}
 	tr.output(tracing.LevelDebug, s, args...)
 }
 
 // Infof is part of interface Trace
 func (tr *Tracer) Infof(s string, args ...any) {
-	if tr.level < tracing.LevelInfo {
-		return
-	}
 	tr.output(tracing.LevelInfo, s, args...)
 }
 
 // Errorf is part of interface Trace
 func (tr *Tracer) Errorf(s string, args ...any) {
-	if tr.level < tracing.LevelError {
-		return
-	}
 	tr.output(tracing.LevelError, s, args...)
 }
 
 // SetTraceLevel is part of interface Trace
 func (tr *Tracer) SetTraceLevel(l tracing.TraceLevel) {
+	tr.mu.Lock()
+	defer tr.mu.Unlock()
 	tr.p = ""
 	tr.level = l
 }
 
 // GetTraceLevel is part of interface Trace
 func (tr *Tracer) GetTraceLevel() tracing.TraceLevel {
+	tr.mu.Lock()
+	defer tr.mu.Unlock()
 	return tr.level
 }
 
