@@ -143,9 +143,8 @@ func (snop selectnoOpTracer) Select(string) Trace {
 //
 // The use of a global TraceSelector is not mandatory.
 func Select(key string) Trace {
-	if selector == nil {
-		return globalNoOpTrace
-	}
+	// The nil check must share the lock with SetTraceSelector: teardown may
+	// replace the interface while other goroutines are still selecting tracers.
 	selectorMutex.RLock()
 	defer selectorMutex.RUnlock()
 	if selector != nil {
